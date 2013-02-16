@@ -6,7 +6,7 @@
 
 (deftest basics
   (testing "initial position"
-    (is (= :C0 (cube/inertial-cube [0 0 0])))))
+    (is (= 'C000 (cube/inertial-cube [0 0 0])))))
 
 (deftest movement
   (testing "forward"
@@ -67,4 +67,13 @@
     (is (= [0 -1 0]
            (cube/yaw-right [1 0 0])))
     (is (= [1 -1 0]
-           (cube/yaw-right [1 1 0])))))
+           (cube/yaw-right [1 1 0]))))
+
+  (testing "composition"
+    (is (= (cube/inertial-cube [0 1 0])
+           ((comp cube/inertial-cube cube/forward) [0 0 0])))
+    (is (= (cube/inertial-cube [1 1 0])
+           ((comp cube/inertial-cube cube/forward cube/yaw-right) [0 1 0])))
+    (is (= (cube/inertial-cube [1 1 0])
+           ((comp cube/inertial-cube cube/forward cube/yaw-right cube/forward) [0 0 0])))
+    ))

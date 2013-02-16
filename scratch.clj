@@ -21,4 +21,8 @@
 
 (flatten [[1 2] [3 4]])
 
-cube/inertial-cube
+(cube/inertial-cube [0 0 0])
+
+(cube/forward [0 0 0])
+
+((comp cube/inertial-cube cube/forward cube/yaw-right) [0 0 0])

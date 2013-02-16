@@ -4,7 +4,7 @@
   (:require (cassiel.cubewar [manifest :as m])))
 
 ;; Represent the cube in absolute coordinates as a map from [x y z] (0..n) to
-;; a unique cell-id (which could be an integer, but we make it a keyword for
+;; a unique cell-id (which could be an integer, but we make it a symbol for
 ;; clarity).
 
 (def inertial-cube
@@ -14,7 +14,7 @@
    (for [x (range m/CUBE-SIZE)
          y (range m/CUBE-SIZE)
          z (range m/CUBE-SIZE)]
-     [[x y z] (keyword (str "C" (+ x (* m/CUBE-SIZE (+ y (* m/CUBE-SIZE z))))))])))
+     [[x y z] (symbol (str "C" x y z))])))
 
 ;; Navigation functions. Each takes the coordinate to access, and returns the
 ;; coordinate to use in the reference frame prior to the move.
