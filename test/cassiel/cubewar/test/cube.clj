@@ -2,11 +2,21 @@
 
 (ns cassiel.cubewar.test.cube
   (:use clojure.test)
-  (:require [cassiel.cubewar [cube :as cube]]))
+  (:require (cassiel.cubewar [manifest :as m]
+                             [cube :as cube])))
 
 (deftest basics
   (testing "initial position"
     (is (= 'C000 (cube/inertial-cube [0 0 0])))))
+
+(deftest wall-detection
+  (testing "walls"
+    (is (not (cube/wall? [0 0 0])))
+    (is (not (cube/wall? (repeat 3 (dec m/CUBE-SIZE)))))
+    (is (cube/wall? [0 m/CUBE-SIZE 0]))
+    (is (cube/wall? [0 0 -1]))
+    )
+  )
 
 (deftest movement
   (testing "forward"

@@ -25,3 +25,9 @@
 (map #(% [0 0 0]) (vals {'PLAYER (fn [[x y z]] :X)}))
 
 (pl/add-player {} 'PLAYER (pl/gen-player [0 0 0]))
+
+(some identity {:a 3 :b 5})
+
+(map identity {:a 3 :b 5})
+
+(not nil)

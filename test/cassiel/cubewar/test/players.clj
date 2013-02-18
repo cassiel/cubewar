@@ -1,8 +1,7 @@
-;; Test cube operations.
-
 (ns cassiel.cubewar.test.players
+  "Test basic player set operations."
   (:use clojure.test)
-  (:require [cassiel.cubewar [players :as pl]]))
+  (:require (cassiel.cubewar [players :as pl])))
 
 (deftest basics
   (testing "population 1"

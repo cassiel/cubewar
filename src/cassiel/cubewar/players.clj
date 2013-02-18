@@ -18,3 +18,12 @@
       (if (some (partial = pos) current-positions)
         (throw (IllegalStateException. "cell already occupied"))
         (assoc state name p)))))
+
+(defn player-at
+  "Return the player at this (inertial) position, or nil if none."
+  [state pos]
+  (letfn
+      ;; Does a player pos-fn on the origin return this position?
+      [(at-pos [pos-fn] (= (pos-fn [0 0 0]) pos))]
+    (some (fn [[name pos-fn]] (if (at-pos pos-fn) name nil)) state))
+  )
