@@ -75,5 +75,4 @@
     (is (= (cube/inertial-cube [1 1 0])
            ((comp cube/inertial-cube cube/forward cube/yaw-right) [0 1 0])))
     (is (= (cube/inertial-cube [1 1 0])
-           ((comp cube/inertial-cube cube/forward cube/yaw-right cube/forward) [0 0 0])))
-    ))
+           ((comp cube/inertial-cube cube/forward cube/yaw-right cube/forward) [0 0 0])))))
