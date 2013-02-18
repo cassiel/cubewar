@@ -1,9 +1,7 @@
 (ns user
   (:require (cassiel.cubewar [manifest :as m]
-                             [cube :as cube])))
-
-(keyword (str "A" 34))
-
+                             [cube :as cube]
+                             [players :as pl])))
 
 (
  (reduce
@@ -16,13 +14,14 @@
     ))
  [0 1 0])
 
-(apply hash-map [[1 2] "X" [3 4] "Y"])
-
-
-(flatten [[1 2] [3 4]])
-
 (cube/inertial-cube [0 0 0])
 
 (cube/forward [0 0 0])
 
+(cube/pitch-up [0 1 0])
+
 ((comp cube/inertial-cube cube/forward cube/yaw-right) [0 0 0])
+
+(map #(% [0 0 0]) (vals {'PLAYER (fn [[x y z]] :X)}))
+
+(pl/add-player {} 'PLAYER (pl/gen-player [0 0 0]))

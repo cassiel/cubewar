@@ -1,6 +1,5 @@
-;; Basic geometry and navigation for the cube.
-
 (ns cassiel.cubewar.cube
+  "Basic geometry and navigation for the cube."
   (:require (cassiel.cubewar [manifest :as m])))
 
 ;; Represent the cube in absolute coordinates as a map from [x y z] (0..n) to
@@ -18,6 +17,8 @@
 
 ;; Navigation functions. Each takes the coordinate to access, and returns the
 ;; coordinate to use in the reference frame prior to the move.
+;; Coordinate system is right-hand: X is positive to right, Y positive ahead,
+;; Z positive upwards.
 
 (defn forward
   "Move forward one step. There are no range/boundary checks here."
