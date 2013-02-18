@@ -7,10 +7,11 @@
   "Examine a cell coordinate from a player's perspective. The player will only see
    itself at [0 0 0] if it's in the state.
    Possible results: :empty, :wall, [:occupied name]."
-  [state p pos]
-  (if (c/wall? pos)
-    :wall
-    (let [p (pl/player-at state pos)]
-      (if p
-        [:player p]
-        :empty))))
+  [state me pos]
+  (let [abs-pos (me pos)]
+    (if (c/wall? abs-pos)
+      :wall
+      (let [p (pl/player-at state abs-pos)]
+        (if p
+          [:player p]
+          :empty)))))

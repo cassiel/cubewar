@@ -1,7 +1,9 @@
 (ns user
   (:require (cassiel.cubewar [manifest :as m]
                              [cube :as cube]
-                             [players :as pl])))
+                             [players :as pl]
+                             [view :as v]
+                             [state-navigation :as nav])))
 
 (
  (reduce
@@ -24,10 +26,31 @@
 
 (map #(% [0 0 0]) (vals {'PLAYER (fn [[x y z]] :X)}))
 
-(pl/add-player {} 'PLAYER (pl/gen-player [0 0 0]))
+(def state0
+  (pl/add-player {} 'PLAYER (pl/gen-player [0 0 0])))
 
-(some identity {:a 3 :b 5})
+(def state1
+  (pl/add-player {} 'PLAYER (comp (pl/gen-player [0 0 0]) cube/forward)))
 
-(map identity {:a 3 :b 5})
+(v/look state0 (pl/gen-player [0 0 0]) [0 0 0])
 
-(not nil)
+(v/look state0 (comp (pl/gen-player [0 0 0]) cube/forward) [0 0 0])
+(v/look state0 (comp (pl/gen-player [0 0 0]) cube/pitch-up) [0 0 0])
+
+
+(map (fn [[name f]] {:name name :pos (f [0 0 0])})
+     state1)
+
+state0
+
+(
+ (get
+  (nav/navigate
+   state0
+   'PLAYER
+   cube/forward
+   )
+  'PLAYER)
+ [0 0 0])
+
+(#{1 2} 1)
