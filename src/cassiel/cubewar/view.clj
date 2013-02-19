@@ -1,12 +1,13 @@
 (ns cassiel.cubewar.view
   "Generate view from a player's perspective."
-  (:require (cassiel.cubewar [cube :as c]
+  (:require (cassiel.cubewar [manifest :as m]
+                             [cube :as c]
                              [players :as pl])))
 
 (defn look
   "Examine a cell coordinate from a player's perspective. The player will only see
    itself at [0 0 0] if it's in the state.
-   Possible results: :empty, :wall, [:occupied name]."
+   Possible results: :empty, :wall, [:player name]."
   [state me pos]
   (let [abs-pos (me pos)]
     (if (c/wall? abs-pos)
@@ -15,3 +16,20 @@
         (if p
           [:player p]
           :empty)))))
+
+(defn look-plane
+  "Return the transverse plane view: a sequence of ascending Y sweeps,
+   ordered from low to high X.
+   TODO: we may have to start thinking about the performance of look()."
+  [state me]
+  (for [x (range (int (/ (- m/VIEW-WIDTH) 2))
+                 (inc (int (/ m/VIEW-WIDTH 2))))]
+    (for [y (range m/VIEW-DEPTH)]
+      (look state me [x y 0]))))
+
+(defn look-ahead
+  "Return a sequence for the view directly ahead (including our origin), as far
+   as the fire range."
+  [state me]
+  (for [y (range m/FIRE-DEPTH)]
+    (look state me [0 y 0])))

@@ -4,7 +4,9 @@
   (:require (cassiel.cubewar [view :as v])))
 
 (defn navigate
-  "Alter the state by letting this player perform a single navigation step."
+  "Alter the state by letting this player perform a single navigation step.
+   Throws IllegalArgumentException for collision. (TODO: should probably
+   be something less generic.)"
   [state name nav-fn]
   (let [p (get state name)]
     (if p

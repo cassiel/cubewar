@@ -19,20 +19,13 @@
          (pl/add-player 'Player-2 (pl/gen-player [1 0 0])))))
 
   (testing "name clash"
-    (is (= "player already in cube"
-           (try
-             (-> {}
-                 (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
-                 (pl/add-player 'Player-1 (pl/gen-player [1 0 0])))
-             (catch IllegalStateException exn (.getMessage exn))))
-     )    )
+    (is (thrown-with-msg? IllegalStateException #"player already in cube"
+          (-> {}
+              (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
+              (pl/add-player 'Player-1 (pl/gen-player [1 0 0]))))))
 
   (testing "position clash"
-    (is (= "cell already occupied"
-           (try
-             (-> {}
-                 (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
-                 (pl/add-player 'Player-2 (pl/gen-player [0 0 0])))
-             (catch IllegalStateException exn (.getMessage exn))))
-     ))
-  )
+    (is (thrown-with-msg? IllegalStateException #"cell already occupied"
+          (-> {}
+              (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
+              (pl/add-player 'Player-2 (pl/gen-player [0 0 0])))))))

@@ -3,7 +3,8 @@
                              [cube :as cube]
                              [players :as pl]
                              [view :as v]
-                             [state-navigation :as nav])))
+                             [state-navigation :as nav]
+                             [tournament :as t])))
 
 (
  (reduce
@@ -32,16 +33,25 @@
 (def state1
   (pl/add-player {} 'PLAYER (comp (pl/gen-player [0 0 0]) cube/forward)))
 
+(def state-n
+  (-> {}
+      (pl/add-player :P1 (pl/gen-player [0 0 0]))
+      (pl/add-player :P2 (pl/gen-player [1 0 0]))
+      (pl/add-player :P3 (pl/gen-player [0 1 0]))))
+
 (v/look state0 (pl/gen-player [0 0 0]) [0 0 0])
 
 (v/look state0 (comp (pl/gen-player [0 0 0]) cube/forward) [0 0 0])
 (v/look state0 (comp (pl/gen-player [0 0 0]) cube/pitch-up) [0 0 0])
 
+(v/look-plane state-n (pl/gen-player [0 0 0]))
 
 (map (fn [[name f]] {:name name :pos (f [0 0 0])})
      state1)
 
 state0
+
+(t/fire state-n :P1)
 
 (
  (get
@@ -54,3 +64,17 @@ state0
  [0 0 0])
 
 (#{1 2} 1)
+
+(range -10 5)
+
+(int (/ (- 9) 2))
+
+
+
+(range (int (/ (- m/VIEW-WIDTH) 2))
+       (inc (int (/ m/VIEW-WIDTH 2)))
+       )
+
+(repeat 4 :A)
+
+(= [:x :x] (repeat 2 :x))

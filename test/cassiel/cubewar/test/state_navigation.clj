@@ -21,29 +21,23 @@
 (deftest bad-moves
   (testing "collision check with wall"
     (let [state (pl/add-player {} :PLAYER (pl/gen-player [0 2 0]))]
-      (is (= "destination not empty: :wall"
-             (try
-               (nav/navigate state :PLAYER c/forward)
-               (catch IllegalArgumentException exn (.getMessage exn)))))))
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: :wall"
+            (nav/navigate state :PLAYER c/forward)))))
 
   (testing "collision check with second player"
     (let [state (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))]
-      (is (= "destination not empty: [:player :P2]"
-             (try
-               (nav/navigate state :P1 c/forward)
-               (catch IllegalArgumentException exn (.getMessage exn)))))))
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \[:player :P2\]"
+            (nav/navigate state :P1 c/forward)))))
 
   (testing "collision check with wall after double yaw"
     (let [state (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0]))
                     (nav/navigate :P c/yaw-left)
                     (nav/navigate :P c/yaw-left))]
-      (is (= "destination not empty: :wall"
-             (try
-               (nav/navigate state :P c/forward)
-               (catch IllegalArgumentException exn (.getMessage exn)))))))
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: :wall"
+            (nav/navigate state :P c/forward)))))
 
   (testing "collision check with second player after double pitch"
     (let [state (-> {}
@@ -51,7 +45,5 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0]))
                     (nav/navigate :P2 c/pitch-down)
                     (nav/navigate :P2 c/pitch-down))]
-      (is (= "destination not empty: [:player :P1]"
-             (try
-               (nav/navigate state :P2 c/forward)
-               (catch IllegalArgumentException exn (.getMessage exn))))))))
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \[:player :P1\]"
+            (nav/navigate state :P2 c/forward))))))
