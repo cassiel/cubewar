@@ -14,7 +14,7 @@
       :wall
       (let [p (pl/player-at state abs-pos)]
         (if p
-          [:player p]
+          {:player p}
           :empty)))))
 
 (defn look-plane
@@ -33,3 +33,11 @@
   [state me]
   (for [y (range m/FIRE-DEPTH)]
     (look state me [0 y 0])))
+
+(defn fire
+  "A named player fires a shot. Return nil or playername."
+  [state name]
+  (let [p (get state name)
+        view (rest (look-ahead state p))]
+    ;; Look for first non-`:empty`, non-`:wall`, if any.
+    (some #(when-not (#{:empty :wall} %) (:player %)) view)))

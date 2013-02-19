@@ -28,7 +28,7 @@
     (let [state (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))]
-      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \[:player :P2\]"
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \{:player :P2\}"
             (nav/navigate state :P1 c/forward)))))
 
   (testing "collision check with wall after double yaw"
@@ -45,5 +45,5 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0]))
                     (nav/navigate :P2 c/pitch-down)
                     (nav/navigate :P2 c/pitch-down))]
-      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \[:player :P1\]"
+      (is (thrown-with-msg? IllegalArgumentException #"destination not empty: \{:player :P1\}"
             (nav/navigate state :P2 c/forward))))))

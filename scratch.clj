@@ -51,7 +51,12 @@
 
 state0
 
-(t/fire state-n :P1)
+(v/fire state-n :P1)
+
+(def world-n {:cube state-n
+              :scoring nil})
+
+(t/fire world-n :P1)
 
 (
  (get
@@ -78,3 +83,6 @@ state0
 (repeat 4 :A)
 
 (= [:x :x] (repeat 2 :x))
+
+
+(fn [:a] "A")

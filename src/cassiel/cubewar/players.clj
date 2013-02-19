@@ -25,5 +25,4 @@
   (letfn
       ;; Does a player pos-fn on the origin return this position?
       [(at-pos [pos-fn] (= (pos-fn [0 0 0]) pos))]
-    (some (fn [[name pos-fn]] (if (at-pos pos-fn) name nil)) state))
-  )
+    (some (fn [[name pos-fn]] (if (at-pos pos-fn) name nil)) state)))
