@@ -66,33 +66,36 @@
 
 (deftest test-firings
   (testing "miss"
-    (let [state (pl/add-player {} :PLAYER (pl/gen-player [0 0 0]))]
-      (is (nil? (v/fire state :PLAYER)))))
+    (let [p (pl/gen-player [0 0 0])
+          state (pl/add-player {} :PLAYER p)]
+      (is (nil? (v/fire state p)))))
 
   (testing "hit"
-    (let [state (-> {}
-                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+    (let [p (pl/gen-player [0 0 0])
+          state (-> {}
+                    (pl/add-player :P1 p)
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))]
-      (is (= :P2 (v/fire state :P1)))))
+      (is (= :P2 (v/fire state p)))))
 
   (testing "hit further"
-    (let [state (-> {}
-                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+    (let [p (pl/gen-player [0 0 0])
+          state (-> {}
+                    (pl/add-player :P1 p)
                     (pl/add-player :P2 (pl/gen-player [0 2 0])))]
-      (is (= :P2 (v/fire state :P1)))))
+      (is (= :P2 (v/fire state p)))))
 
   (testing "hit nearest"
-    (let [state (-> {}
-                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+    (let [p (pl/gen-player [0 0 0])
+          state (-> {}
+                    (pl/add-player :P1 p)
                     (pl/add-player :P2 (pl/gen-player [0 1 0]))
                     (pl/add-player :P3 (pl/gen-player [0 2 0])))]
-      (is (= :P2 (v/fire state :P1)))))
+      (is (= :P2 (v/fire state p)))))
 
   (testing "turn to hit"
     (let [state (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
-                    (pl/add-player :P2 (pl/gen-player [1 0 0])))]
+                    (pl/add-player :P2 (pl/gen-player [1 0 0])))
+          state' (n/navigate state :P1 c/yaw-right)]
       (is (= :P2
-             (-> state
-                 (n/navigate :P1 c/yaw-right)
-                 (v/fire :P1)))))))
+             (v/fire state' (get state' :P1)))))))

@@ -1,5 +1,6 @@
 (ns cassiel.cubewar.view
-  "Generate view from a player's perspective."
+  "Generate view from a player's perspective. All take player orientation functions
+   (not names)."
   (:require (cassiel.cubewar [manifest :as m]
                              [cube :as c]
                              [players :as pl])))
@@ -36,8 +37,7 @@
 
 (defn fire
   "A named player fires a shot. Return nil or playername."
-  [state name]
-  (let [p (get state name)
-        view (rest (look-ahead state p))]
+  [state me]
+  (let [view (rest (look-ahead state me))]
     ;; Look for first non-`:empty`, non-`:wall`, if any.
     (some #(when-not (#{:empty :wall} %) (:player %)) view)))

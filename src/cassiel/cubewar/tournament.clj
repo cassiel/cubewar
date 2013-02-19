@@ -8,7 +8,7 @@
   "Takes, and returns, a complete world state. Also returns a journal."
   [world name]
   (let [{:keys [cube scoring]} world
-        res (v/fire cube name)]
+        res (v/fire cube (get cube name))]
     (if res
       {:world world
        ;; TODO: score the hit
