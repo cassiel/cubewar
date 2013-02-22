@@ -54,9 +54,10 @@ state0
 (v/fire state-n :P1)
 
 (def world-n {:cube state-n
-              :scoring nil})
+              :scoring {:P1 50}})
 
-(t/fire world-n :P1)
+(:journal
+ (t/fire world-n :P1))
 
 (
  (get
@@ -74,15 +75,6 @@ state0
 
 (int (/ (- 9) 2))
 
+(and "A" 5)
 
-
-(range (int (/ (- m/VIEW-WIDTH) 2))
-       (inc (int (/ m/VIEW-WIDTH 2)))
-       )
-
-(repeat 4 :A)
-
-(= [:x :x] (repeat 2 :x))
-
-
-(fn [:a] "A")
+(= {:A 1 :B 2} {:B 2 :A 1})
