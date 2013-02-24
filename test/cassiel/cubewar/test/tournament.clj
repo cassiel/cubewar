@@ -85,7 +85,8 @@
           world0 {:arena arena :scoring {:P1 1 :P2 1}}
           {:keys [world journal]} (t/fire world0 :P1)]
       (is (= [{:to :P1 :type :hit :hit :P2}
-              {:to :P2 :type :hit-by :hit-by :P1 :hit-points 0}]
+              {:to :P2 :type :hit-by :hit-by :P1 :hit-points 0}
+              {:to :* :type :dead :dead :P2}]
              journal))
       (is (= 0 (-> world (:scoring) (:P2))))
       (is (-> world (:arena) (:P1)))

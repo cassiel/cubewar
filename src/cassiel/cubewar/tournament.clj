@@ -26,16 +26,20 @@
           (let [victim (v/fire arena me-playing)]
             (if victim
               (let [old-score (get scoring victim)
-                    new-score (dec old-score)]
+                    new-score (dec old-score)
+                    j1 {:to name :type :hit :hit victim}
+                    j2 {:to victim
+                        :type :hit-by
+                        :hit-by name
+                        :hit-points new-score}
+                    ]
                 ;; Re-score the victim, remove from arena if hit-points now zero.
                 {:world (assoc world
                           :scoring (assoc scoring victim new-score)
                           :arena (if (pos? new-score) arena (dissoc arena victim)))
-                 :journal [{:to name :type :hit :hit victim}
-                           {:to victim
-                            :type :hit-by
-                            :hit-by name
-                            :hit-points new-score}]})
+                 :journal (if (pos? new-score)
+                            [j1 j2]
+                            [j1 j2 {:to :* :type :dead :dead victim}])})
               {:world world
                :journal [{:to name :type :miss}]})))))
 
