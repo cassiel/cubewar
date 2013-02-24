@@ -1,6 +1,7 @@
 (ns cassiel.cubewar.server
   "Main server."
-  (:require (cassiel.cubewar [tournament :as t]
+  (:require (cassiel.cubewar [cube :as c]
+                             [tournament :as t]
                              [network :as net])))
 
 ;; Deal with incoming OSC messages. For now (this is temporary) include the
@@ -13,13 +14,20 @@
 ;; and a journal.
 
 (defmethod service :handshake
-  [world _ args]
+  [world & _]
   {:world world :journal {:action :handshake-reply :args []}})
 
 (defmethod service :fire
   [world _ [player]]
-  (t/fire world player)
-  )
+  (t/fire world player))
+
+(defmethod service :pitch-up
+  [world _ [player]]
+  (t/move world player c/pitch-up))
+
+(defmethod service :yaw-right
+  [world _ [player]]
+  (t/move world player c/yaw-right))
 
 (defn serve1
   "The `world-state` is an atom with map containing `:world` and `:journal`. The

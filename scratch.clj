@@ -110,6 +110,9 @@ state0
             :fire [:P]
             )
 
-(srv/serve1 (atom {:world world-n :journal []})
-            :fire [:P1]
-            )
+(def a (atom {:world world-n :journal []}))
+
+(srv/serve1 a :fire [:P1])
+(srv/serve1 a :fire [:P3])
+(srv/serve1 a :pitch-up [:P1])
+(srv/serve1 a :yaw-right [:P1])
