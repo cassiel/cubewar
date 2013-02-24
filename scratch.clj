@@ -4,7 +4,10 @@
                              [players :as pl]
                              [view :as v]
                              [state-navigation :as nav]
-                             [tournament :as t])))
+                             [tournament :as t]
+                             [network :as net]
+                             [server :as srv]))
+  (:import [net.loadbang.osc.data Message]))
 
 (
  (reduce
@@ -54,7 +57,9 @@ state0
 (v/fire state-n :P1)
 
 (def world-n {:arena state-n
-              :scoring {:P1 50}})
+              :scoring {:P1 50 :P3 50}})
+
+(t/fire world-n :P1)
 
 (:journal
  (t/fire world-n :P1))
@@ -78,3 +83,33 @@ state0
 (and "A" 5)
 
 (= {:A 1 :B 2} {:B 2 :A 1})
+
+;; Networking.
+
+(defn pr-message
+  [^Message m]
+  (println (.getAddress m))
+  (doseq [i (range (.getNumArguments m))] (println "->" (.getValue (.getArgument m i)))))
+
+
+(def r (net/start-receiver 8123 pr-message))
+
+(.close r)
+
+(.getPort r)
+
+(get (re-find #"^/?(.+)+$" "/fooble") 1)
+
+;; Testing server functions.
+
+(srv/serve1 (atom {:world {} :journal []})
+            :handshake []
+            )
+
+(srv/serve1 (atom {:world {:arena {} :scoring {:P 10}} :journal []})
+            :fire [:P]
+            )
+
+(srv/serve1 (atom {:world world-n :journal []})
+            :fire [:P1]
+            )

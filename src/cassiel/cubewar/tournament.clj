@@ -20,28 +20,30 @@
 
           (nil? me-playing)
           {:world world
-           :journal [{:to name :type :error :error "not currently in play"}]}
+           :journal [{:to name :action :error :args ["not currently in play"]}]}
 
           :else
           (let [victim (v/fire arena me-playing)]
             (if victim
-              (let [old-score (get scoring victim)
-                    new-score (dec old-score)
-                    j1 {:to name :type :hit :hit victim}
-                    j2 {:to victim
-                        :type :hit-by
-                        :hit-by name
-                        :hit-points new-score}
-                    ]
-                ;; Re-score the victim, remove from arena if hit-points now zero.
-                {:world (assoc world
-                          :scoring (assoc scoring victim new-score)
-                          :arena (if (pos? new-score) arena (dissoc arena victim)))
-                 :journal (if (pos? new-score)
-                            [j1 j2]
-                            [j1 j2 {:to :* :type :dead :dead victim}])})
+              (let [old-score (get scoring victim)]
+                (if old-score
+                  (let [new-score (dec old-score)
+                        j1 {:to name :action :hit :args [victim]}
+                        j2 {:to victim
+                            :action :hit-by
+                            :args [name new-score]}
+                        ]
+                    ;; Re-score the victim, remove from arena if hit-points now zero.
+                    {:world (assoc world
+                              :scoring (assoc scoring victim new-score)
+                              :arena (if (pos? new-score) arena (dissoc arena victim)))
+                     :journal (if (pos? new-score)
+                                [j1 j2]
+                                [j1 j2 {:to :* :action :dead :args [victim]}])})
+                  (throw (IllegalStateException.
+                          (str "player not in scoring system: " victim)))))
               {:world world
-               :journal [{:to name :type :miss}]})))))
+               :journal [{:to name :action :miss}]})))))
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view."
@@ -52,6 +54,6 @@
             me (get arena' name)
             view (v/look-plane arena' me)]
         {:world (assoc world :arena arena')
-         :journal [{:to name :type :view :view view}]})
+         :journal [{:to name :action :view :args view}]})
       (catch IllegalArgumentException exn {:world world
-                                           :journal [{:to name :type :blocked}]}))))
+                                           :journal [{:to name :action :blocked}]}))))
