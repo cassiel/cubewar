@@ -9,7 +9,7 @@
   "Takes, and returns, a complete world state. Also returns a journal.
    If a player is not in the scoring system, it's an internal error.
    If the player is not in the cube, then they're (presumably) sitting
-   out this tournament."
+   out this tournament round."
   [world name]
   (let [{:keys [arena scoring]} world
         me-scored (get scoring name)
@@ -23,12 +23,19 @@
            :journal [{:to name :type :error :error "not currently in play"}]}
 
           :else
-          (let [fire-result (and me-playing (v/fire arena me-playing))]
-            (if fire-result
-              {:world world
-               ;; TODO: score the hit
-               :journal [{:to name :type :hit :hit fire-result}
-                         {:to fire-result :type :hit-by :hit-by name}]}
+          (let [victim (v/fire arena me-playing)]
+            (if victim
+              (let [old-score (get scoring victim)
+                    new-score (dec old-score)]
+                ;; Re-score the victim, remove from arena if hit-points now zero.
+                {:world (assoc world
+                          :scoring (assoc scoring victim new-score)
+                          :arena (if (pos? new-score) arena (dissoc arena victim)))
+                 :journal [{:to name :type :hit :hit victim}
+                           {:to victim
+                            :type :hit-by
+                            :hit-by name
+                            :hit-points new-score}]})
               {:world world
                :journal [{:to name :type :miss}]})))))
 

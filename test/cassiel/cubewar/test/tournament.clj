@@ -22,7 +22,7 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10 :P2 10}}]
       (is (= [{:to :P1 :type :hit :hit :P2}
-              {:to :P2 :type :hit-by :hit-by :P1}]
+              {:to :P2 :type :hit-by :hit-by :P1 :hit-points 9}]
              (-> world
                  (t/fire :P1)
                  (:journal)))))))
@@ -71,11 +71,10 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
-          world1 {:arena arena :scoring {:P1 10 :P2 10}}
-          {:keys [world journal]} (t/fire world1 :P1)]
+          world0 {:arena arena :scoring {:P1 10 :P2 10}}
+          {:keys [world journal]} (t/fire world0 :P1)]
       (is (= [{:to :P1 :type :hit :hit :P2}
-              {:to :P2 :type :hit-by :hit-by :P1}
-              {:to :P2 :type :hit-points :hit-points 9}]
+              {:to :P2 :type :hit-by :hit-by :P1 :hit-points 9}]
              journal))
       (is (= 9 (:P2 (:scoring world))))))
 
@@ -83,10 +82,11 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
-          world1 {:arena arena :scoring {:P1 1 :P2 1}}
-          {:keys [world journal]} (t/fire world1 :P1)]
+          world0 {:arena arena :scoring {:P1 1 :P2 1}}
+          {:keys [world journal]} (t/fire world0 :P1)]
       (is (= [{:to :P1 :type :hit :hit :P2}
-              {:to :P2 :type :hit-by :hit-by :P1}
-              {:to :P2 :type :knocked-out}]
+              {:to :P2 :type :hit-by :hit-by :P1 :hit-points 0}]
              journal))
-      (is (= 9 (:P2 (:scoring world)))))))
+      (is (= 0 (-> world (:scoring) (:P2))))
+      (is (-> world (:arena) (:P1)))
+      (is (nil? (-> world (:arena) (:P2)))))))

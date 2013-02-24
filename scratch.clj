@@ -53,7 +53,7 @@ state0
 
 (v/fire state-n :P1)
 
-(def world-n {:cube state-n
+(def world-n {:arena state-n
               :scoring {:P1 50}})
 
 (:journal
