@@ -110,9 +110,32 @@ state0
             :fire [:P]
             )
 
-(def a (atom {:world world-n :journal []}))
+;; State testing.
 
-(srv/serve1 a :fire [:P1])
-(srv/serve1 a :fire [:P3])
-(srv/serve1 a :pitch-up [:P1])
-(srv/serve1 a :yaw-right [:P1])
+(def state-n
+  (-> {}
+      (pl/add-player :P1 (pl/gen-player [0 0 0]))
+      (pl/add-player :P2 (pl/gen-player [1 0 0]))
+      (pl/add-player :P3 (pl/gen-player [0 1 0]))))
+
+(def world-n {:arena state-n
+              :scoring {:P1 50 :P3 50}})
+
+
+(def a# (atom {:world world-n :journal []}))
+
+(srv/serve1 a# :fire [:P1])
+(srv/serve1 a# :fire [:P3])
+(srv/serve1 a# :pitch-up [:P1])
+(srv/serve1 a# :yaw-right [:P1])
+
+;; Network testing.
+
+(def rs (srv/start-game 8123))
+
+(:receiver rs)
+(:state rs)
+
+(-> rs (:state) (deref) (:world) (:scoring))
+
+(.close (:receiver rs))

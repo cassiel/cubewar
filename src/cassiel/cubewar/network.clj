@@ -5,7 +5,7 @@
            [net.loadbang.osc.data Message]
            [net.loadbang.osc.exn CommsException]))
 
-(defn dispatch-message
+(defn unpack-message
   "Unpack a message and call `f` with address and list of args."
   [f ^Message m]
   (let [address (get (re-find #"^/?(.+)+$" (.getAddress m)) 1)
@@ -20,7 +20,7 @@
   (let [rx (proxy
                [UDPReceiver]
                [port]
-             (consumeMessage [_date00 m] (dispatch-message f m)))
+             (consumeMessage [_date00 m] (unpack-message f m)))
         _ (.open rx)]
 
     (.start (Thread. (reify Runnable
