@@ -119,15 +119,23 @@ state0
       (pl/add-player :P3 (pl/gen-player [0 1 0]))))
 
 (def world-n {:arena state-n
-              :scoring {:P1 50 :P3 50}})
+              :scoring {:P1 50 :P3 50}
+              :sources->names {}
+              :names->destinations {}})
 
 
-(def a# (atom {:world world-n :journal []}))
+(def WORLD-STATE (atom {:world world-n :journal []}))
 
-(srv/serve1 a# :fire [:P1])
-(srv/serve1 a# :fire [:P3])
-(srv/serve1 a# :pitch-up [:P1])
-(srv/serve1 a# :yaw-right [:P1])
+(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :attach [:P1 9998])
+
+(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :handshake nil)
+
+(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :fire nil)
+(srv/serve1 WORLD-STATE :fire [:P3])
+(srv/serve1 WORLD-STATE :pitch-up [:P1])
+(srv/serve1 WORLD-STATE :yaw-right [:P1])
+
+
 
 ;; Network testing.
 
@@ -139,3 +147,7 @@ state0
 (-> rs (:state) (deref) (:world) (:scoring))
 
 (.close (:receiver rs))
+
+(keyword (gensym))
+
+(clojure.set/map-invert {:A 1})

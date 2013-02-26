@@ -5,38 +5,57 @@
                              [tournament :as t]
                              [network :as net])))
 
-;; Deal with incoming OSC messages. For now (this is temporary) include the
-;; symbolic name of the player as part of the message.
+;; Deal with incoming OSC messages. The multimethod dispatches on the
+;; third argument (the address of the OSC message, turned into a keyword)
+;; to determine the function.
 
-(defmulti service (fn [& args] (nth args 1)))
+(defmulti service (fn [& args] (nth args 3)))
 
-;; `service1` takes the world, the dispatch argument, and a list
+;; `service` takes the world, the dispatch argument, and a list
 ;; of arguments that came in with the OSC message. The result is a new world
 ;; and a journal.
 
+(defmethod service :attach
+  [world origin _player _ [player-name back-port]]
+  (let [sources->names (assoc (:sources->names world)
+                         player-name
+                         origin)
+        names->destinations (assoc (:names->destinations world)
+                              (assoc origin :port back-port)
+                              player-name)]
+    {:world (assoc world
+              :sources->names sources->names
+              :names->destinations names->destinations)
+     :journal [{:to player-name :action :attached :args [(:host origin) back-port]}]})
+  )
+
 (defmethod service :handshake
-  [world & _]
+  [world origin player & _]
   {:world world :journal {:action :handshake-reply :args []}})
 
 (defmethod service :fire
-  [world _ [player]]
+  [world origin player & _]
   (t/fire world player))
 
 (defmethod service :pitch-up
-  [world _ [player]]
+  [world origin player & _]
   (t/move world player c/pitch-up))
 
 (defmethod service :yaw-right
-  [world _ [player]]
+  [world origin player & _]
   (t/move world player c/yaw-right))
+
+(defn retrieve-player
+  [world origin]
+  (get (:sources->names world) origin))
 
 (defn serve1
   "The `world-state` is an atom with map containing `:world` and `:journal`. The
    journal is effectively transient, but we need some way to return it atomically
    so that it can be transmitted. (TODO we need a way to do that safely.)"
-  [world-state action args]
+  [world-state origin action args]
   (let [{j :journal}
-        (swap! world-state (fn [{w :world}] (service w action args)))]
+        (swap! world-state (fn [{w :world}] (service w origin (retrieve-player w origin) action args)))]
     j))
 
 ;; Actual server.
@@ -50,7 +69,7 @@
                   (pl/add-player "P2" (pl/gen-player [1 0 0]))
                   (pl/add-player "P3" (pl/gen-player [0 1 0])))
         scoring {"P1" 50 "P2" 50 "P3" 50}
-        WORLD-STATE (atom {:world {:arena arena :scoring scoring}
+        WORLD-STATE (atom {:world {:arena arena :scoring scoring :back-links {}}
                            :journal []})]
 
     (add-watch WORLD-STATE

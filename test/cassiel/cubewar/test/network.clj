@@ -7,7 +7,8 @@
 (deftest data
   (testing "basics"
     (is (= [:A [34 4.5 "Hello"]]
-           (net/dispatch-message (fn [a args] [a args])
+           (net/dispatch-message (fn [_ a args] [a args])
+                                 nil
                                  (-> (Message. "/A")
                                      (.addInteger 34)
                                      (.addFloat 4.5)
