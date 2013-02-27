@@ -15,19 +15,21 @@
 ;; of arguments that came in with the OSC message. The result is a new world
 ;; and a journal.
 
+;; Attach a player. `sources->names` maps incoming `{:host, :port}` to name.
+;; `names->transmitters` maps names to actual transmitters.
+
 (defmethod service :attach
   [world origin _player _ [player-name back-port]]
   (let [sources->names (assoc (:sources->names world)
-                         player-name
-                         origin)
-        names->destinations (assoc (:names->destinations world)
-                              (assoc origin :port back-port)
-                              player-name)]
+                         origin
+                         player-name)
+        names->transmitters (assoc (:names->transmitters world)
+                              player-name
+                              (net/start-transmitter (:host origin) back-port))]
     {:world (assoc world
               :sources->names sources->names
-              :names->destinations names->destinations)
-     :journal [{:to player-name :action :attached :args [(:host origin) back-port]}]})
-  )
+              :names->transmitters names->transmitters)
+     :journal [{:to player-name :action :attached :args [(:host origin) back-port]}]}))
 
 (defmethod service :handshake
   [world origin player & _]
