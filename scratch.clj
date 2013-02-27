@@ -148,6 +148,14 @@ state0
 
 (.close (:receiver rs))
 
-(keyword (gensym))
+;; Junk.
 
+(str :A)
+(clojure.string/replace :A ":" "/")
+(class 4)
+(isa? (class 4) Long)
+(instance? Long 4)
+(instance? clojure.lang.Keyword :A)
+(keyword (gensym))
+(class :A)
 (clojure.set/map-invert {:A 1})

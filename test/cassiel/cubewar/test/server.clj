@@ -3,7 +3,7 @@
   (:use clojure.test)
   (:require (cassiel.cubewar [players :as pl]
                              [server :as srv]))
-  (:import [net.loadbang.osc.comms UDPTransmitter]))
+  (:import [net.loadbang.osc.comms IPTransmitter]))
 
 (def state-n
   (-> {}
@@ -18,25 +18,25 @@
 
 (deftest housekeeping
   (testing "attach: world state"
-    (let [WORLD-STATE (atom {:world world-n :journal []})
-          _ (srv/serve1 WORLD-STATE
+    (let [FULL-STATE (atom {:world world-n :journal []})
+          _ (srv/serve1 FULL-STATE
                         {:host "localhost" :port 9999}
                         :attach [:P1 9998])]
-      (is (= :P1 (-> @WORLD-STATE
+      (is (= :P1 (-> @FULL-STATE
                      (:world)
                      (:sources->names)
                      (get {:host "localhost" :port 9999}))))
-      (let [r (-> @WORLD-STATE
+      (let [r (-> @FULL-STATE
                   (:world)
                   (:names->transmitters)
                   (:P1))]
-        (is (= UDPTransmitter (class r)))
+        (is (isa? (class r) IPTransmitter))
         (is (= "localhost" (-> r (.getAddress) (.getHostName))))
         (is (= 9998 (.getPort r))))))
 
   (testing "attach: journal"
-    (let [WORLD-STATE (atom {:world world-n :journal []})]
+    (let [FULL-STATE (atom {:world world-n :journal []})]
       (is (= [{:to :P1 :action :attached :args ["localhost" 9998]}]
-             (srv/serve1 WORLD-STATE
+             (srv/serve1 FULL-STATE
                          {:host "localhost" :port 9999}
                          :attach [:P1 9998]))))))

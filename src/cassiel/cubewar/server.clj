@@ -33,7 +33,7 @@
 
 (defmethod service :handshake
   [world origin player & _]
-  {:world world :journal {:action :handshake-reply :args []}})
+  {:world world :journal [{:to player :action :handshake-reply :args []}]})
 
 (defmethod service :fire
   [world origin player & _]
@@ -51,14 +51,18 @@
   [world origin]
   (get (:sources->names world) origin))
 
+(defn retrieve-transmitter
+  [world player]
+  (get (:names->transmitters world) player))
+
 (defn serve1
-  "The `world-state` is an atom with map containing `:world` and `:journal`. The
+  "The `full-state` is an atom with map containing `:world` and `:journal`. The
    journal is effectively transient, but we need some way to return it atomically
    so that it can be transmitted. (TODO we need a way to do that safely.)"
-  [world-state origin action args]
-  (let [{j :journal}
-        (swap! world-state (fn [{w :world}] (service w origin (retrieve-player w origin) action args)))]
-    j))
+  [full-state origin action args]
+
+  (swap! full-state
+         (fn [{w :world}] (service w origin (retrieve-player w origin) action args))))
 
 ;; Actual server.
 
@@ -71,11 +75,18 @@
                   (pl/add-player "P2" (pl/gen-player [1 0 0]))
                   (pl/add-player "P3" (pl/gen-player [0 1 0])))
         scoring {"P1" 50 "P2" 50 "P3" 50}
-        WORLD-STATE (atom {:world {:arena arena :scoring scoring :back-links {}}
-                           :journal []})]
+        FULL-STATE (atom {:world {:arena arena :scoring scoring :back-links {}}
+                          :journal []})]
 
-    (add-watch WORLD-STATE
-               :key
-               (fn [k r old new] (println (:journal new))))
-    {:receiver (net/start-receiver 8123 (partial serve1 WORLD-STATE))
-     :state WORLD-STATE}))
+    ;; The watch runs through the journal, picking out the destination transmitter via `:to`,
+    ;; making a `Message` out of the rest of each entry, and transmitting.
+    (letfn [(watcher [k r old new]
+              (println (:journal new))
+              (doseq [x (:journal new)]
+                (let [tx (retrieve-transmitter (:world new) (:to x))
+                      msg (net/make-message (:action x) (:args x))]
+                  (.transmit tx msg))))]
+      (add-watch FULL-STATE :key watcher))
+
+    {:receiver (net/start-receiver 8123 (partial serve1 FULL-STATE))
+     :state FULL-STATE}))

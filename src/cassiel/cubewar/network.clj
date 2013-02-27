@@ -3,7 +3,8 @@
   (:import [java.net InetAddress]
            [net.loadbang.osc.comms UDPTransmitter UDPReceiver]
            [net.loadbang.osc.data Message]
-           [net.loadbang.osc.exn CommsException]))
+           [net.loadbang.osc.exn CommsException]
+           [clojure.lang Keyword]))
 
 (defn dispatch-message
   "Unpack a message and call `f` with host/port, OSC address, and list of args."
@@ -16,8 +17,21 @@
                (.getValue (.getArgument m i)))]
     (f origin (keyword address) args)))
 
+(defn dekeyword [k punc]
+  (clojure.string/replace k ":" punc))
+
+(defn make-message
+  "Create a `Message` from a map containing action (regarded as OSC address) and arguments."
+  [action args]
+  (let [m (Message. (dekeyword action "/"))]
+    (reduce (fn [m a]
+              (condp instance? a
+                Number (.addInteger m a)
+                Keyword (.addString m (dekeyword a ""))
+                String (.addString m a))) m args)))
+
 (defn start-receiver
-  "Create a receiver socket given a consuming function. The receiver accepts `(.stop)`."
+  "Create a receiver socket given a consuming function. The receiver accepts `(.close)`."
   [port f]
   (let [rx (proxy
                [UDPReceiver]
