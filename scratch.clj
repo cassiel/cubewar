@@ -136,16 +136,17 @@ state0
 (srv/serve1 WORLD-STATE :yaw-right [:P1])
 
 
-;; Network testing.
+;; --- Network testing.
 
 (def rs (srv/start-game 8123))
 
 (:receiver rs)
-(:state rs)
-(-> rs (:state) (deref) (:world) (:scoring))
+
+@(:world rs)
+
 (.close (:receiver rs))
 
-;; Junk.
+;; --- Junk.
 
 (str :A)
 (clojure.string/replace :A ":" "/")
@@ -156,3 +157,10 @@ state0
 (keyword (gensym))
 (class :A)
 (clojure.set/map-invert {:A 1})
+
+(first [1 2 3 5])
+
+(def aaa :A)
+(case aaa :A 1 2)
+
+(or nil (throw (IllegalArgumentException. "A")))
