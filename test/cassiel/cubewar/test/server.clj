@@ -34,7 +34,7 @@
 
   (testing "attach: journal"
     (let [FULL-STATE (atom world-n)]
-      (is (= [{:to :P1 :action :attached :args ["localhost" 9998]}]
+      (is (= [{:to :P1 :action :attached :args {:host "localhost" :port 9998}}]
              (srv/serve1 FULL-STATE
                          {:host "localhost" :port 9999}
                          :attach [:P1 9998]))))))

@@ -2,7 +2,7 @@
   "OSC networking utilities."
   (:import [java.net InetAddress]
            [net.loadbang.osc.comms UDPTransmitter UDPReceiver]
-           [net.loadbang.osc.data Message]
+           [net.loadbang.osc.data Bundle Message]
            [net.loadbang.osc.exn CommsException]
            [clojure.lang Keyword]))
 
@@ -21,10 +21,15 @@
   (clojure.string/replace k ":" punc))
 
 (defn make-message
-  "Create a `Message` from a map containing action (regarded as OSC address) and arguments."
+  "Create a `Message` from a map containing action (regarded as OSC address) and arguments
+   (represented as a map: we need to turn this into something that Max can unpack as a
+   dictionary)."
   [action args]
   (let [m (Message. (dekeyword action "/"))]
-    (reduce (fn [m a]
+    (reduce (fn [m [k a]]
+              (-> m
+                  (.addString (dekeyword k ""))
+                  (.addString ":"))
               (condp instance? a
                 Number (.addInteger m a)
                 Keyword (.addString m (dekeyword a ""))

@@ -12,5 +12,7 @@
 (def VIEW-DEPTH 3)
 
 ;; Depth of fire (count includes origin position).
-
 (def FIRE-DEPTH VIEW-DEPTH)
+
+;; Special symbol for broadcast messages.
+(def BROADCAST :*)

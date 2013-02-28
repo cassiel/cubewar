@@ -1,6 +1,7 @@
 (ns cassiel.cubewar.server
   "Main server."
-  (:require (cassiel.cubewar [cube :as c]
+  (:require (cassiel.cubewar [manifest :as m]
+                             [cube :as c]
                              [players :as pl]
                              [tournament :as t]
                              [network :as net])))
@@ -37,7 +38,9 @@
         :origins->names origins->names
         :names->transmitters names->transmitters
         :scoring (assoc (:scoring world) player-name 0)
-        :journal [{:to player-name :action :attached :args [(:host origin) back-port]}]))
+        :journal [{:to player-name
+                   :action :attached
+                   :args {:host (:host origin) :port back-port}}]))
 
     :detach
     ;; TODO: check for prior attachment.
@@ -51,7 +54,7 @@
         :journal []))
 
     :handshake
-    (assoc world :journal [{:to player :action :handshake-reply :args []}])
+    (assoc world :journal [{:to player :action :handshake-reply}])
 
     :fire (t/fire world player)
     :pitch-up (t/move world player c/pitch-up)
@@ -83,12 +86,11 @@
 
   ;; Test with strings for players - these are directly in the OSC at the moment.
   (let [arena (-> {}
-                  (pl/add-player "P1" (pl/gen-player [0 0 0]))
-                  (pl/add-player "P2" (pl/gen-player [1 0 0]))
-                  (pl/add-player "P3" (pl/gen-player [0 1 0])))
-        scoring {"P1" 50 "P2" 50 "P3" 50}
+                  (pl/add-player "Pa" (pl/gen-player [0 0 0]))
+                  (pl/add-player "Pb" (pl/gen-player [1 0 0]))
+                  (pl/add-player "Pc" (pl/gen-player [0 1 0])))
         WORLD (atom {:arena arena
-                     :scoring scoring
+                     :scoring {}
                      :origins->names {}
                      :names->transmitters {}})]
 
@@ -101,9 +103,12 @@
                 (do
                   (println (:journal new))
                   (doseq [x (:journal new)]
-                    (let [tx (retrieve-transmitter new (:to x))
+                    (let [to (:to x)
+                          txs (if (= to m/BROADCAST)
+                                (vals (:names->transmitters new))
+                                [(retrieve-transmitter new to)])
                           msg (net/make-message (:action x) (:args x))]
-                      (.transmit tx msg))))
+                      (doseq [tx txs] (.transmit tx msg)))))
                 (catch Exception exn
                   (println "WATCHER exception: " exn)
                   (.printStackTrace exn))))]

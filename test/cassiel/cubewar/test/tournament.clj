@@ -21,8 +21,8 @@
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10 :P2 10}}]
-      (is (= [{:to :P1 :action :hit :args [:P2]}
-              {:to :P2 :action :hit-by :args [:P1 9]}]
+      (is (= [{:to :P1 :action :hit :args {:player :P2}}
+              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 9}}]
              (-> world
                  (t/fire :P1)
                  (:journal)))))))
@@ -74,7 +74,7 @@
     ;; We can't really get an empty cube, but:
     (let [world {:arena {} :scoring {:P 10}}
           {j :journal} (t/fire world :P)]
-      (is (= [{:to :P :action :error :args ["not currently in play"]}]
+      (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
              j))))
 
   (testing "score hit"
@@ -83,8 +83,8 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 10 :P2 10}}
           world1 (t/fire world0 :P1)]
-      (is (= [{:to :P1 :action :hit :args [:P2]}
-              {:to :P2 :action :hit-by :args [:P1 9]}]
+      (is (= [{:to :P1 :action :hit :args {:player :P2}}
+              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 9}}]
              (:journal world1)))
       (is (= 9 (:P2 (:scoring world1))))))
 
@@ -94,9 +94,9 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 1 :P2 1}}
           world1 (t/fire world0 :P1)]
-      (is (= [{:to :P1 :action :hit :args [:P2]}
-              {:to :P2 :action :hit-by :args [:P1 0]}
-              {:to :* :action :dead :args [:P2]}]
+      (is (= [{:to :P1 :action :hit :args {:player :P2}}
+              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
+              {:to :* :action :dead :args {:player :P2}}]
              (:journal world1)))
       (is (= 0 (-> world1 (:scoring) (:P2))))
       (is (-> world1 (:arena) (:P1)))
