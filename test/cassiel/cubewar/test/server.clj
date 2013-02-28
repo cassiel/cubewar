@@ -13,21 +13,19 @@
 
 (def world-n {:arena state-n
               :scoring {:P1 50 :P3 50}
-              :names->destinations {}
-              :sources->names {}})
+              :names->transmitters {}
+              :origins->names {}})
 
 (deftest housekeeping
   (testing "attach: world state"
-    (let [FULL-STATE (atom {:world world-n :journal []})
+    (let [FULL-STATE (atom world-n)
           _ (srv/serve1 FULL-STATE
                         {:host "localhost" :port 9999}
                         :attach [:P1 9998])]
       (is (= :P1 (-> @FULL-STATE
-                     (:world)
-                     (:sources->names)
+                     (:origins->names)
                      (get {:host "localhost" :port 9999}))))
       (let [r (-> @FULL-STATE
-                  (:world)
                   (:names->transmitters)
                   (:P1))]
         (is (isa? (class r) IPTransmitter))
@@ -35,7 +33,7 @@
         (is (= 9998 (.getPort r))))))
 
   (testing "attach: journal"
-    (let [FULL-STATE (atom {:world world-n :journal []})]
+    (let [FULL-STATE (atom world-n)]
       (is (= [{:to :P1 :action :attached :args ["localhost" 9998]}]
              (srv/serve1 FULL-STATE
                          {:host "localhost" :port 9999}

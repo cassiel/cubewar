@@ -82,22 +82,22 @@
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 10 :P2 10}}
-          {:keys [world journal]} (t/fire world0 :P1)]
+          world1 (t/fire world0 :P1)]
       (is (= [{:to :P1 :action :hit :args [:P2]}
               {:to :P2 :action :hit-by :args [:P1 9]}]
-             journal))
-      (is (= 9 (:P2 (:scoring world))))))
+             (:journal world1)))
+      (is (= 9 (:P2 (:scoring world1))))))
 
   (testing "knockout"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 1 :P2 1}}
-          {:keys [world journal]} (t/fire world0 :P1)]
+          world1 (t/fire world0 :P1)]
       (is (= [{:to :P1 :action :hit :args [:P2]}
               {:to :P2 :action :hit-by :args [:P1 0]}
               {:to :* :action :dead :args [:P2]}]
-             journal))
-      (is (= 0 (-> world (:scoring) (:P2))))
-      (is (-> world (:arena) (:P1)))
-      (is (nil? (-> world (:arena) (:P2)))))))
+             (:journal world1)))
+      (is (= 0 (-> world1 (:scoring) (:P2))))
+      (is (-> world1 (:arena) (:P1)))
+      (is (nil? (-> world1 (:arena) (:P2)))))))

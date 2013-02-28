@@ -19,8 +19,8 @@
           (throw (IllegalStateException. (str "player not in scoring system: " name)))
 
           (nil? me-playing)
-          {:world world
-           :journal [{:to name :action :error :args ["not currently in play"]}]}
+          (assoc world
+            :journal [{:to name :action :error :args ["not currently in play"]}])
 
           :else
           (let [victim (v/fire arena me-playing)]
@@ -34,16 +34,17 @@
                             :args [name new-score]}
                         ]
                     ;; Re-score the victim, remove from arena if hit-points now zero.
-                    {:world (assoc world
-                              :scoring (assoc scoring victim new-score)
-                              :arena (if (pos? new-score) arena (dissoc arena victim)))
-                     :journal (if (pos? new-score)
-                                [j1 j2]
-                                [j1 j2 {:to :* :action :dead :args [victim]}])})
+                    (assoc world
+                      :scoring (assoc scoring victim new-score)
+                      :arena (if (pos? new-score) arena (dissoc arena victim))
+                      :journal (if (pos? new-score)
+                                 [j1 j2]
+                                 [j1 j2 {:to :* :action :dead :args [victim]}])))
                   (throw (IllegalStateException.
                           (str "player not in scoring system: " victim)))))
-              {:world world
-               :journal [{:to name :action :miss}]})))))
+
+              (assoc world
+                :journal [{:to name :action :miss}]))))))
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view."
@@ -53,7 +54,8 @@
       (let [arena' (n/navigate arena name f)
             me (get arena' name)
             view (v/look-plane arena' me)]
-        {:world (assoc world :arena arena')
-         :journal [{:to name :action :view :args view}]})
-      (catch IllegalArgumentException exn {:world world
-                                           :journal [{:to name :action :blocked}]}))))
+        (assoc world
+          :arena arena'
+          :journal [{:to name :action :view :args view}]))
+      (catch IllegalArgumentException exn
+        (assoc world :journal [{:to name :action :blocked}]))))) ;; TODO: missing :args OK?

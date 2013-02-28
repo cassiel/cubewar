@@ -14,7 +14,7 @@
                                      (.addFloat 4.5)
                                      (.addString "Hello")))))
 
-    (let [msg (net/make-message {:action :foo :args [:bar 67 "baz"]})]
+    (let [msg (net/make-message :foo [:bar 67 "baz"])]
       (is (= "/foo" (.getAddress msg)))
       (is (= 3 (.getNumArguments msg)))
       (is (= ["bar" 67 "baz"] (map #(.getValue (.getArgument msg %)) (range 3)))))))

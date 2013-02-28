@@ -120,8 +120,8 @@ state0
 
 (def world-n {:arena state-n
               :scoring {:P1 50 :P3 50}
-              :sources->names {}
-              :names->destinations {}})
+              :origins->names {}
+              :names->transmitters {}})
 
 
 (def WORLD-STATE (atom {:world world-n :journal []}))
@@ -136,16 +136,13 @@ state0
 (srv/serve1 WORLD-STATE :yaw-right [:P1])
 
 
-
 ;; Network testing.
 
 (def rs (srv/start-game 8123))
 
 (:receiver rs)
 (:state rs)
-
 (-> rs (:state) (deref) (:world) (:scoring))
-
 (.close (:receiver rs))
 
 ;; Junk.
