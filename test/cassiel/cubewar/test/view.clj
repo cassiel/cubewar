@@ -6,6 +6,13 @@
                              [view :as v]
                              [state-navigation :as n])))
 
+(deftest formatting
+  (testing "view formatting"
+    (is (= {:x0 {:y0 1 :y1 2 :y2 3}
+            :x1 {:y0 4 :y1 5 :y2 6}
+            :x2 {:y0 7 :y1 8 :y2 9}}
+           (v/dict-format [[1 2 3] [4 5 6] [7 8 9]])))))
+
 (deftest basics
   (testing "empty view"
     (let [p (pl/gen-player [0 0 0])

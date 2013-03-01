@@ -42,9 +42,9 @@
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}]
-      (is (= [{:to :P :action :view :args [(repeat 3 :wall)
-                                           [{:player :P} :empty :wall]
-                                           [:empty :empty :wall]]}]
+      (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                           :x1 {:y0 {:player :P} :y1 :empty :y2 :wall}
+                                           :x2 {:y0 :empty :y1 :empty :y2 :wall}}}]
              (-> world
                  (t/move :P c/forward)
                  (:journal))))))
@@ -62,9 +62,9 @@
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}]
-      (is (= [{:to :P :action :view :args [(repeat 3 :wall)
-                                           [{:player :P} :wall :wall]
-                                           [:empty :wall :wall]]}]
+      (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
+                                           :x1 {:y0 {:player :P} :y1 :wall :y2 :wall}
+                                           :x2 {:y0 :empty :y1 :wall :y2 :wall}}}]
              (-> world
                  (t/move :P c/yaw-left)
                  (:journal)))))))

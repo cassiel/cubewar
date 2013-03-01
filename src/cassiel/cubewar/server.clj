@@ -57,8 +57,14 @@
     (assoc world :journal [{:to player :action :handshake-reply}])
 
     :fire (t/fire world player)
+
     :pitch-up (t/move world player c/pitch-up)
+    :pitch-down (t/move world player c/pitch-down)
+    :yaw-left (t/move world player c/yaw-left)
     :yaw-right (t/move world player c/yaw-right)
+    :roll-left (t/move world player c/roll-left)
+    :roll-right (t/move world player c/roll-right)
+    :forward (t/move world player c/forward)
 
     (throw (IllegalArgumentException. (str "unrecognised action: " action))))
   )

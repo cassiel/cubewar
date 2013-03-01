@@ -6,7 +6,8 @@
                              [state-navigation :as nav]
                              [tournament :as t]
                              [network :as net]
-                             [server :as srv]))
+                             [server :as srv])
+            :reload-all)
   (:import [net.loadbang.osc.data Message]))
 
 (
@@ -188,4 +189,18 @@ state0
 
 (class {:A 3})
 
-(doseq [a [2 3 4]] (println a))
+(v/dict-format [[1 2 3] [4 5 {:player 6}] [7 8 9]])
+
+
+(first
+ (reduce (fn [[m i] x] [(assoc m (keyword (str "P" i)) x) (inc i)])
+         [{} 0]
+         [[1 2 3] [4 5 6] [7 8 9]]))
+
+(defn ordinal-keys [prefix items]
+  (first
+   (reduce (fn [[m i] x] [(assoc m (keyword (str prefix i)) x) (inc i)])
+         [{} 0]
+         items)))
+
+(ordinal-keys "x" [1 2 3 4 5])

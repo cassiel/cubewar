@@ -41,3 +41,16 @@
   (let [view (rest (look-ahead state me))]
     ;; Look for first non-`:empty`, non-`:wall`, if any.
     (some #(when-not (#{:empty :wall} %) (:player %)) view)))
+
+(defn ordinal-keys [prefix items]
+  (first
+   (reduce (fn [[m i] x] [(assoc m (keyword (str prefix i)) x) (inc i)])
+           [{} 0]
+           items)))
+
+(defn dict-format
+  "Turn a view (a list along X of successive Y vectors) into a map structure. MaxMSP
+   can't handle dictionaries where a data entry is itself a list of dictionaries, so
+   we have to synthesise distinct ordinal-looking keys."
+  [view]
+  (ordinal-keys "x" (map (partial ordinal-keys "y") view)))

@@ -59,6 +59,6 @@
             view (v/look-plane arena' me)]
         (assoc world
           :arena arena'
-          :journal [{:to name :action :view :args view}]))
+          :journal [{:to name :action :view :args (v/dict-format view)}]))
       (catch IllegalArgumentException exn
         (assoc world :journal [{:to name :action :blocked}])))))
