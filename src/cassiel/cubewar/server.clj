@@ -94,10 +94,10 @@
                      :origins->names {}
                      :names->transmitters {}})]
 
-    ;; The watcher runs through the journal, picking out the destination transmitter via `:to`,
-    ;; making a `Message` out of the rest of each entry, and transmitting.
-    ;; TODO: deal with wildcards - also think about broadcasts to players in-arena vs.
-    ;; all connected players.
+    ;; The watcher runs through the journal, picking out the destination transmitter via `:to`
+    ;; (or all of them for a broadcast), making a `Message` out of the rest of each entry,
+    ;; and transmitting.
+    ;; TODO: think about broadcasts to players in-arena vs. all connected players.
     (letfn [(watcher [k r old new]
               (try
                 (do

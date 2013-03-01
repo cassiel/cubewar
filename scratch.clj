@@ -164,3 +164,28 @@ state0
 (case aaa :A 1 2)
 
 (or nil (throw (IllegalArgumentException. "A")))
+
+(let [msg (net/make-message :ACTION {:A 3 :B 5})]
+  (map #(.getValue (.getArgument msg %))
+       (range (.getNumArguments msg))))
+
+(letfn [(decomp [msg] (map #(.getValue (.getArgument msg %))
+                               (range (.getNumArguments msg))))]
+  (= ["A" ":" 3 "B" ":" 5]
+     (decomp (net/make-message :BOGUS {:A 3 :B 5}))))
+
+(let [msg (net/make-message (Message. "/A") {:Foo [4 3 {:B 3}]})]
+  (map #(.getValue (.getArgument msg %))
+       (range (.getNumArguments msg))))
+
+(instance? clojure.lang.Seqable [2])
+
+(class [2])
+
+(instance? java.util.Map [2])
+
+(instance? java.util.List {:A 3})
+
+(class {:A 3})
+
+(doseq [a [2 3 4]] (println a))

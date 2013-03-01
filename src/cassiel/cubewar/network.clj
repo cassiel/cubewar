@@ -4,7 +4,8 @@
            [net.loadbang.osc.comms UDPTransmitter UDPReceiver]
            [net.loadbang.osc.data Bundle Message]
            [net.loadbang.osc.exn CommsException]
-           [clojure.lang Keyword]))
+           [clojure.lang Keyword]
+           [java.util List Map]))
 
 (defn dispatch-message
   "Unpack a message and call `f` with host/port, OSC address, and list of args."
@@ -25,15 +26,26 @@
    (represented as a map: we need to turn this into something that Max can unpack as a
    dictionary)."
   [action args]
-  (let [m (Message. (dekeyword action "/"))]
-    (reduce (fn [m [k a]]
-              (-> m
-                  (.addString (dekeyword k ""))
-                  (.addString ":"))
+  (let [msg (Message. (dekeyword action "/"))]
+    (letfn [(add1 [a]
               (condp instance? a
-                Number (.addInteger m a)
-                Keyword (.addString m (dekeyword a ""))
-                String (.addString m a))) m args)))
+                Number (.addInteger msg a)
+                Keyword (.addString msg (dekeyword a ""))
+                String (.addString msg a)
+                List (doseq [x a] (add1 x))
+                Map (do (.addString msg "{")
+                        (add-args a)
+                        (.addString msg "}"))))
+
+            (add-args [args]
+              (doseq [[k a] args]
+                (-> msg
+                    (.addString (dekeyword k ""))
+                    (.addString ":"))
+                (add1 a)))]
+
+      (add-args args)
+      msg)))
 
 (defn start-receiver
   "Create a receiver socket given a consuming function. The receiver accepts `(.close)`."
