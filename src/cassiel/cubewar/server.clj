@@ -83,7 +83,7 @@
                 (do
                   (println "SERVICE exception: " exn)
                   (.printStackTrace exn)
-                  w)))))))
+                  w)))))))              ; TODO Empty journal on failure.
 
 ;; Actual server.
 

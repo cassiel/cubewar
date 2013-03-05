@@ -5,9 +5,14 @@
   (:require (cassiel.cubewar [manifest :as m]
                              [cube :as cube])))
 
-(deftest basics
-  (testing "initial position"
-    (is (= 'C000 (cube/inertial-cube [0 0 0])))))
+(def tagged-cube
+  (reduce
+   (fn [m [k v]] (assoc m k v))
+   {}
+   (for [x (range m/CUBE-SIZE)
+         y (range m/CUBE-SIZE)
+         z (range m/CUBE-SIZE)]
+     [[x y z] (symbol (str "C" x y z))])))
 
 (deftest wall-detection
   (testing "walls"
@@ -80,9 +85,9 @@
            (cube/yaw-right [1 1 0]))))
 
   (testing "composition"
-    (is (= (cube/inertial-cube [0 1 0])
-           ((comp cube/inertial-cube cube/forward) [0 0 0])))
-    (is (= (cube/inertial-cube [1 1 0])
-           ((comp cube/inertial-cube cube/forward cube/yaw-right) [0 1 0])))
-    (is (= (cube/inertial-cube [1 1 0])
-           ((comp cube/inertial-cube cube/forward cube/yaw-right cube/forward) [0 0 0])))))
+    (is (= (tagged-cube [0 1 0])
+           ((comp tagged-cube cube/forward) [0 0 0])))
+    (is (= (tagged-cube [1 1 0])
+           ((comp tagged-cube cube/forward cube/yaw-right) [0 1 0])))
+    (is (= (tagged-cube [1 1 0])
+           ((comp tagged-cube cube/forward cube/yaw-right cube/forward) [0 0 0])))))

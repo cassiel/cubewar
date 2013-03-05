@@ -8,7 +8,7 @@
 (defn look
   "Examine a cell coordinate from a player's perspective. The player will only see
    itself at [0 0 0] if it's in the state.
-   Possible results: :empty, :wall, [:player name]."
+   Possible results: :empty, :wall, {:player name}."
   [state me pos]
   (let [abs-pos (me pos)]
     (if (c/wall? abs-pos)
