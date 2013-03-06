@@ -59,10 +59,7 @@
     :fire (t/fire world player)
 
     ;; Anything else: look it up as a manoeuvre function.
-    (let [f (c/manoeuvres action)]
-      (if f
-        (t/move world player action f)
-        (throw (IllegalArgumentException. (str "unrecognised action: " action)))))))
+    (t/move world player action)))
 
 (defn serve1
   "The journal is effectively transient, but we need some way to return it atomically

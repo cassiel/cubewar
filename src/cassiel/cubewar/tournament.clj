@@ -3,6 +3,7 @@
    actual OSC commands coming in from the clients (after appropriate authentication).
    `tournament` also builds journal lists of actions to transmit or broadcast."
   (:require (cassiel.cubewar [manifest :as m]
+                             [cube :as c]
                              [view :as v]
                              [state-navigation :as n])))
 
@@ -51,16 +52,20 @@
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view."
-  [world name move-name f]
-  (let [{:keys [arena]} world]
-    (try
-      (let [arena' (n/navigate arena name f)
-            me (get arena' name)
-            view (v/look-plane arena' me)]
-        (assoc world
-          :arena arena'
-          :journal [{:to name
-                     :action :view
-                     :args (assoc (v/dict-format view) :manoeuvre move-name)}]))
-      (catch IllegalArgumentException exn
-        (assoc world :journal [{:to name :action :blocked}])))))
+  [world name action]
+  (let [{:keys [arena]} world
+        f (c/manoeuvres action)]
+    (if f
+      (try
+        (let [arena' (n/navigate arena name f)
+              me (get arena' name)
+              view (v/look-plane arena' me)]
+          (assoc world
+            :arena arena'
+            :journal [{:to name
+                       :action :view
+                       :args (assoc (v/dict-format view) :manoeuvre action)}]))
+        (catch IllegalArgumentException exn
+          (assoc world :journal [{:to name :action :blocked}])))
+
+      (throw (IllegalArgumentException. (str "unrecognised action: " action))))))

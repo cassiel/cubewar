@@ -1,8 +1,7 @@
 (ns cassiel.cubewar.test.tournament
   "Test tournament machinery."
   (:use clojure.test)
-  (:require (cassiel.cubewar [cube :as c]
-                             [players :as pl]
+  (:require (cassiel.cubewar [players :as pl]
                              [state-navigation :as n]
                              [tournament :as t])))
 
@@ -47,7 +46,7 @@
                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}
                                            :manoeuvre :forward}}]
              (-> world
-                 (t/move :P :forward c/forward)
+                 (t/move :P :forward)
                  (:journal))))))
 
   (testing "forward blocked"
@@ -56,7 +55,7 @@
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :blocked}]
              (-> world
-                 (t/move :P :forward c/forward)
+                 (t/move :P :forward)
                  (:journal))))))
 
   (testing "yaw left"
@@ -68,7 +67,7 @@
                                            :x2 {:y0 :empty :y1 :wall :y2 :wall}
                                            :manoeuvre :yaw-left}}]
              (-> world
-                 (t/move :P :yaw-left c/yaw-left)
+                 (t/move :P :yaw-left)
                  (:journal)))))))
 
 (deftest basic-round-scoring
