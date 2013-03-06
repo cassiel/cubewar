@@ -44,9 +44,10 @@
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                            :x1 {:y0 {:player :P} :y1 :empty :y2 :wall}
-                                           :x2 {:y0 :empty :y1 :empty :y2 :wall}}}]
+                                           :x2 {:y0 :empty :y1 :empty :y2 :wall}
+                                           :manoeuvre :forward}}]
              (-> world
-                 (t/move :P c/forward)
+                 (t/move :P :forward c/forward)
                  (:journal))))))
 
   (testing "forward blocked"
@@ -55,7 +56,7 @@
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :blocked}]
              (-> world
-                 (t/move :P c/forward)
+                 (t/move :P :forward c/forward)
                  (:journal))))))
 
   (testing "yaw left"
@@ -64,9 +65,10 @@
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
                                            :x1 {:y0 {:player :P} :y1 :wall :y2 :wall}
-                                           :x2 {:y0 :empty :y1 :wall :y2 :wall}}}]
+                                           :x2 {:y0 :empty :y1 :wall :y2 :wall}
+                                           :manoeuvre :yaw-left}}]
              (-> world
-                 (t/move :P c/yaw-left)
+                 (t/move :P :yaw-left c/yaw-left)
                  (:journal)))))))
 
 (deftest basic-round-scoring

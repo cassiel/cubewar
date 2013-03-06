@@ -58,16 +58,11 @@
 
     :fire (t/fire world player)
 
-    :pitch-up (t/move world player c/pitch-up)
-    :pitch-down (t/move world player c/pitch-down)
-    :yaw-left (t/move world player c/yaw-left)
-    :yaw-right (t/move world player c/yaw-right)
-    :roll-left (t/move world player c/roll-left)
-    :roll-right (t/move world player c/roll-right)
-    :forward (t/move world player c/forward)
-
-    (throw (IllegalArgumentException. (str "unrecognised action: " action))))
-  )
+    ;; Anything else: look it up as a manoeuvre function.
+    (let [f (c/manoeuvres action)]
+      (if f
+        (t/move world player action f)
+        (throw (IllegalArgumentException. (str "unrecognised action: " action)))))))
 
 (defn serve1
   "The journal is effectively transient, but we need some way to return it atomically

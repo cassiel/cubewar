@@ -51,7 +51,7 @@
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view."
-  [world name f]
+  [world name move-name f]
   (let [{:keys [arena]} world]
     (try
       (let [arena' (n/navigate arena name f)
@@ -59,6 +59,8 @@
             view (v/look-plane arena' me)]
         (assoc world
           :arena arena'
-          :journal [{:to name :action :view :args (v/dict-format view)}]))
+          :journal [{:to name
+                     :action :view
+                     :args (assoc (v/dict-format view) :manoeuvre move-name)}]))
       (catch IllegalArgumentException exn
         (assoc world :journal [{:to name :action :blocked}])))))

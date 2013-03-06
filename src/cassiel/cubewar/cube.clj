@@ -47,3 +47,12 @@
   "Yaw to right, new Y pointing to old positive X."
   [[x y z]]
   [y (- x) z])
+
+(def manoeuvres
+  {:forward forward
+   :pitch-up pitch-up
+   :pitch-down pitch-down
+   :yaw-left yaw-left
+   :yaw-right yaw-right
+   :roll-left roll-left
+   :roll-right roll-right})
