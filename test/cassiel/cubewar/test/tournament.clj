@@ -5,6 +5,34 @@
                              [state-navigation :as n]
                              [tournament :as t])))
 
+(deftest game-state
+  (testing "cannot move if not in arena"
+    (let [world {:arena {} :scoring {:P 0}}]
+      (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
+             (-> world (t/fire :P) (:journal))))))
+
+  (testing "attach doesn't put player in arena"
+    (let [world (-> {:arena {} :scoring {}}
+                    (t/attach :P))]
+      (is (:P (:scoring world)))
+      (is (nil? (:P (:arena world))))))
+
+  ;; TEST: attach when already in standby, and attach when already in play.
+
+  (testing "round start puts two players into arena"
+    (let [world (-> {:arena {} :scoring {:P1 0 :P2 0}}
+                    (t/start-round))]
+      (is (:P1 (:arena world)))
+      (is (:P2 (:arena world)))))
+
+  (testing "round start does not put single player into arena"
+    (let [world (-> {:arena {} :scoring {:P1 0}}
+                    (t/start-round))]
+      (is (nil? (:P1 (:arena world))))))
+
+  ;; TEST: detach when in standby and also when in play.
+  )
+
 (deftest fire-journal
   (testing "miss"
     (let [arena (-> {}
