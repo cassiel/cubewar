@@ -204,3 +204,26 @@ state0
          items)))
 
 (ordinal-keys "x" [1 2 3 4 5])
+
+(def foo {:A [0 0 0] :B [0 0 1]})
+
+(for [x (range m/CUBE-SIZE)
+      y (range m/CUBE-SIZE)
+      z (range m/CUBE-SIZE)]
+  [x y z])
+
+(defn occupied [arena pos]
+  (some (fn [[_ pos-fn]] (= pos (pos-fn [0 0 0]))) arena))
+
+
+(some #(when-not (occupied {:P identity :Q (fn [[x y z]] [x y (inc z)])} %) %)
+      (for [x (range m/CUBE-SIZE)
+            y (range m/CUBE-SIZE)
+            z (range m/CUBE-SIZE)]
+        [x y z])
+      )
+
+(t/start-round {:arena {}
+                :scoring {:P1 1 :P2 3}})
+
+::pl/ALREADY-PRESENT

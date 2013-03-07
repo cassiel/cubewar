@@ -1,7 +1,8 @@
 (ns cassiel.cubewar.state-navigation
   "Navigation at the level of the entire game state, by composition,
    with collision detection."
-  (:require (cassiel.cubewar [view :as v])))
+  (:require (cassiel.cubewar [view :as v]))
+  (:use [slingshot.slingshot :only [throw+]]))
 
 (defn navigate
   "Alter the state by letting this player perform a single navigation step.
@@ -18,5 +19,5 @@
         ;; The destination must be empty, or it must (already) be us:
         (if (#{:empty {:player name}} dest-cell)
           (assoc state name new-p)
-          (throw (IllegalArgumentException. (str "destination not empty: " dest-cell)))))
-       (throw (IllegalStateException. (str "player not found in state: " name))))))
+          (throw+ {:type ::NOT-EMPTY :contents dest-cell})))
+      (throw+ {:type ::NOT-IN-PLAY :name name}))))

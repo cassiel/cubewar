@@ -3,6 +3,7 @@
   :url "https://github.com/cassiel/cubewar"
   :dependencies [[org.clojure/clojure "1.5.0"]
                  [compojure "1.1.5"]
+                 [slingshot "0.10.3"]
                  [net.loadbang/net.loadbang.osc "1.5.0"]
                  [org.clojure/java.jdbc "0.2.3"]
                  [org.hsqldb/hsqldb "2.2.9"]]

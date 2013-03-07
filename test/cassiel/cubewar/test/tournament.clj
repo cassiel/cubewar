@@ -1,12 +1,33 @@
 (ns cassiel.cubewar.test.tournament
   "Test tournament machinery."
-  (:use clojure.test)
+  (:use clojure.test
+        slingshot.test)
   (:require (cassiel.cubewar [players :as pl]
                              [state-navigation :as n]
                              [tournament :as t])))
 
+(deftest basics
+  (testing "occupied"
+    (is (t/occupied {:P (pl/gen-player [0 0 0])} [0 0 0]))
+    (is (not (t/occupied {} [0 0 0])))
+    (is (not (t/occupied {:P (pl/gen-player [0 0 1])} [0 0 0])))
+    (is (not (t/occupied {:P (pl/gen-player [0 0 0])} [1 0 0]))))
+
+  (testing "find-space"
+    (is (t/find-space {}))
+    (let [arena {:P1 identity}
+          pos (t/find-space arena)]
+      (is pos)
+      (is (not= ((:P1 arena) [0 0 0])
+                pos)))))
+
 (deftest game-state
   (testing "cannot move if not in arena"
+    (let [world {:arena {} :scoring {:P 0}}]
+      (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
+             (-> world (t/move :P :forward) (:journal))))))
+
+  (testing "cannot fire if not in arena"
     (let [world {:arena {} :scoring {:P 0}}]
       (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
              (-> world (t/fire :P) (:journal))))))
@@ -17,7 +38,21 @@
       (is (:P (:scoring world)))
       (is (nil? (:P (:arena world))))))
 
-  ;; TEST: attach when already in standby, and attach when already in play.
+  (testing "attach when in play/scoring doesn't overwrite"
+    (let [arena (-> {}
+                    (pl/add-player :P (pl/gen-player [0 0 0])))
+          world (-> {:arena arena :scoring {:P 7}}
+                    (t/attach :P))]
+      (is (:P (:arena world)))
+      (is (= 7 (:P (:scoring world))))))
+
+  (testing "player in arena not moved on round start"
+    (let [arena (-> {}
+                    (pl/add-player :P1 (pl/gen-player [2 2 2])))
+          world (t/start-round {:arena arena :scoring {:P2 0}})]
+      (is (-> world (:arena) (:P2)))
+      (is (= [2 2 2]
+             ((-> world (:arena) (:P1)) [0 0 0])))))
 
   (testing "round start puts two players into arena"
     (let [world (-> {:arena {} :scoring {:P1 0 :P2 0}}
@@ -25,10 +60,22 @@
       (is (:P1 (:arena world)))
       (is (:P2 (:arena world)))))
 
-  (testing "round start does not put single player into arena"
-    (let [world (-> {:arena {} :scoring {:P1 0}}
-                    (t/start-round))]
-      (is (nil? (:P1 (:arena world))))))
+  (testing "round start does not leave a single player in the arena"
+    (let [world {:arena {} :scoring {:P1 0}}]
+      (is (thrown+? [:type ::t/NOT-ENOUGH-PLAYERS]
+                    (t/start-round world)))))
+
+  (testing "can start round with one active player"
+    (let [world {:arena {:P1 (pl/gen-player [0 0 0])}
+                 :scoring {:P2 0}}]
+      (is (= 2 (count (-> world (t/start-round) (:arena)))))))
+
+  (testing "detach removes from arena and standby."
+    (let [arena (-> {}
+                    (pl/add-player :P (pl/gen-player [0 0 0])))
+          world (t/detach {:arena arena :scoring {:P 10}} :P)]
+      (is (nil? (:P (:arena world))))
+      (is (nil? (:P (:scoring world))))))
 
   ;; TEST: detach when in standby and also when in play.
   )
@@ -61,8 +108,8 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10}}]
 
-      (is (thrown-with-msg? IllegalStateException #"player not in scoring system: :P2"
-            (-> world (t/fire :P1)))))))
+      (is (thrown+? [:type ::t/NOT-IN-SYSTEM]
+                    (-> world (t/fire :P1)))))))
 
 (deftest move-journal
   (testing "forward OK"

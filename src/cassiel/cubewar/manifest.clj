@@ -14,5 +14,8 @@
 ;; Depth of fire (count includes origin position).
 (def FIRE-DEPTH VIEW-DEPTH)
 
+;; Initial score in new round.
+(def START-SCORE 10)
+
 ;; Special symbol for broadcast messages.
 (def BROADCAST :*)

@@ -4,8 +4,55 @@
    `tournament` also builds journal lists of actions to transmit or broadcast."
   (:require (cassiel.cubewar [manifest :as m]
                              [cube :as c]
+                             [players :as pl]
                              [view :as v]
-                             [state-navigation :as n])))
+                             [state-navigation :as n]))
+  (:use [slingshot.slingshot :only [try+ throw+]]))
+
+(defn attach
+  "Attaches a player (game state only; not networking). A new player is put into
+   standby in the round scoring system, if not already present."
+  [world name]
+  (let [scoring (:scoring world)]
+    (assoc world :scoring (assoc scoring name (or (scoring name) 0)))))
+
+(defn detach
+  "Remove a player completely from the game state. (No changes to networking.)"
+  [world name]
+  (assoc world
+    :arena (dissoc (:arena world) name)
+    :scoring (dissoc (:scoring world) name)))
+
+(defn occupied [arena pos]
+  (some (fn [[_ pos-fn]] (= pos (pos-fn [0 0 0]))) arena))
+
+(defn find-space
+  "Find an empty location in a map of players."
+  [arena]
+  (some #(when-not (occupied arena %) %)
+        (for [x (range m/CUBE-SIZE)
+              y (range m/CUBE-SIZE)
+              z (range m/CUBE-SIZE)]
+          [x y z])))
+
+(defn start-round
+  "Start a new round: reset all scores, put all players into the arena.
+   TODO: the population pass needs to be a bit more random."
+  [world]
+  (letfn [(into-arena [arena name]
+            (assoc arena name (or (arena name)
+                                  (pl/gen-player (find-space arena)))))]
+
+    (if (< (+ (count (:arena world))
+              (count (:scoring world))) 2)
+      (throw+ {:type ::NOT-ENOUGH-PLAYERS})
+      (assoc world
+        :arena (reduce (fn [a [name _]] (into-arena a name))
+                       (:arena world)
+                       (:scoring world))
+        :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
+                         (:scoring world)
+                         (:scoring world))))))
 
 (defn fire
   "Takes, and returns, a complete world state. Also returns a journal.
@@ -18,7 +65,7 @@
         me-playing (get arena name)]
 
     (cond (nil? me-scored)
-          (throw (IllegalStateException. (str "player not in scoring system: " name)))
+          (throw+ {:type ::NOT-IN-SYSTEM :player name})
 
           (nil? me-playing)
           (assoc world
@@ -44,8 +91,7 @@
                                  [j1 j2 {:to m/BROADCAST
                                          :action :dead
                                          :args {:player victim}}])))
-                  (throw (IllegalStateException.
-                          (str "player not in scoring system: " victim)))))
+                  (throw+ {:type ::NOT-IN-SYSTEM :player victim})))
 
               (assoc world
                 :journal [{:to name :action :miss}]))))))
@@ -56,7 +102,7 @@
   (let [{:keys [arena]} world
         f (c/manoeuvres action)]
     (if f
-      (try
+      (try+
         (let [arena' (n/navigate arena name f)
               me (get arena' name)
               view (v/look-plane arena' me)]
@@ -65,7 +111,16 @@
             :journal [{:to name
                        :action :view
                        :args (assoc (v/dict-format view) :manoeuvre action)}]))
-        (catch IllegalArgumentException exn
-          (assoc world :journal [{:to name :action :blocked}])))
+        (catch
+            [:type ::n/NOT-EMPTY]
+            _
+          (assoc world :journal [{:to name :action :blocked}]))
 
-      (throw (IllegalArgumentException. (str "unrecognised action: " action))))))
+        (catch
+            [:type ::n/NOT-IN-PLAY]
+            _
+          (assoc world :journal [{:to name
+                                  :action :error
+                                  :args {:message "not currently in play"}}])))
+
+      (throw+ {:type ::BAD-ACTION :action action}))))

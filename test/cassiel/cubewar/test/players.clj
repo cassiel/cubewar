@@ -1,6 +1,7 @@
 (ns cassiel.cubewar.test.players
   "Test basic player set operations."
-  (:use clojure.test)
+  (:use clojure.test
+        slingshot.test)
   (:require (cassiel.cubewar [players :as pl])))
 
 (deftest basics
@@ -19,13 +20,13 @@
          (pl/add-player 'Player-2 (pl/gen-player [1 0 0])))))
 
   (testing "name clash"
-    (is (thrown-with-msg? IllegalStateException #"player already in cube"
+    (is (thrown+? [:type ::pl/ALREADY-PRESENT]
           (-> {}
               (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
               (pl/add-player 'Player-1 (pl/gen-player [1 0 0]))))))
 
   (testing "position clash"
-    (is (thrown-with-msg? IllegalStateException #"cell already occupied"
+    (is (thrown+? [:type ::pl/NOT-EMPTY]
           (-> {}
               (pl/add-player 'Player-1 (pl/gen-player [0 0 0]))
               (pl/add-player 'Player-2 (pl/gen-player [0 0 0])))))))

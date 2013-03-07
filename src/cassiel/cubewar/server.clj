@@ -4,7 +4,8 @@
                              [cube :as c]
                              [players :as pl]
                              [tournament :as t]
-                             [network :as net])))
+                             [network :as net]))
+  (:use [slingshot.slingshot :only [throw+]]))
 
 (defn retrieve-player
   [world origin]
@@ -14,7 +15,7 @@
   [world player]
   (or
    (get (:names->transmitters world) player)
-   (throw (IllegalStateException. (str "no transmitter found for player " (or player "<null>"))))))
+   (throw+ {:type ::NO-TRANSMITTER :player (or player "<null>")})))
 
 ;; `service` takes the world, the dispatch argument, and a list
 ;; of arguments that came in with the OSC message. The result is a new world.
