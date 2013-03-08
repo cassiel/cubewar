@@ -18,4 +18,4 @@
 (def START-SCORE 10)
 
 ;; Special symbol for broadcast messages.
-(def BROADCAST :*)
+(def BROADCAST ::*)

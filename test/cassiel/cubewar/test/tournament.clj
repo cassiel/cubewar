@@ -2,7 +2,8 @@
   "Test tournament machinery."
   (:use clojure.test
         slingshot.test)
-  (:require (cassiel.cubewar [players :as pl]
+  (:require (cassiel.cubewar [manifest :as m]
+                             [players :as pl]
                              [state-navigation :as n]
                              [tournament :as t])))
 
@@ -77,8 +78,12 @@
       (is (nil? (:P (:arena world))))
       (is (nil? (:P (:scoring world))))))
 
-  ;; TEST: detach when in standby and also when in play.
-  )
+  (testing "detach does not leave one player in arena"
+    (let [arena (-> {}
+                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                    (pl/add-player :P2 (pl/gen-player [0 0 1])))
+          world (t/detach {:arena arena :scoring {:P1 10 :P2 10}} :P1)]
+      (is (nil? (:P2 (:arena world)))))))
 
 (deftest fire-journal
   (testing "miss"
@@ -172,7 +177,7 @@
           world1 (t/fire world0 :P1)]
       (is (= [{:to :P1 :action :hit :args {:player :P2}}
               {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
-              {:to :* :action :dead :args {:player :P2}}]
+              {:to m/BROADCAST :action :dead :args {:player :P2}}]
              (:journal world1)))
       (is (= 0 (-> world1 (:scoring) (:P2))))
       (is (-> world1 (:arena) (:P1)))

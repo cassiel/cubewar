@@ -226,4 +226,7 @@ state0
 (t/start-round {:arena {}
                 :scoring {:P1 1 :P2 3}})
 
-::pl/ALREADY-PRESENT
+:cassiel.cubewar.players/ALREADY-PRESENT
+
+(= ::pl/ALREADY-PRESENT :pl/ALREADY-PRESENT)
+(= ::pl/ALREADY-PRESENT :cassiel.cubewar.players/ALREADY-PRESENT)

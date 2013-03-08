@@ -9,20 +9,6 @@
                              [state-navigation :as n]))
   (:use [slingshot.slingshot :only [try+ throw+]]))
 
-(defn attach
-  "Attaches a player (game state only; not networking). A new player is put into
-   standby in the round scoring system, if not already present."
-  [world name]
-  (let [scoring (:scoring world)]
-    (assoc world :scoring (assoc scoring name (or (scoring name) 0)))))
-
-(defn detach
-  "Remove a player completely from the game state. (No changes to networking.)"
-  [world name]
-  (assoc world
-    :arena (dissoc (:arena world) name)
-    :scoring (dissoc (:scoring world) name)))
-
 (defn occupied [arena pos]
   (some (fn [[_ pos-fn]] (= pos (pos-fn [0 0 0]))) arena))
 
@@ -35,24 +21,50 @@
               z (range m/CUBE-SIZE)]
           [x y z])))
 
+(defn- into-arena
+  [arena name]
+  (assoc arena name (or (arena name)
+                        (pl/gen-player (find-space arena)))))
+
+(defn- remove-from-arena
+  "Remove a player from the arena."
+  [world p]
+  (assoc world
+    :arena (dissoc (:arena world) p)))
+
+(defn attach
+  "Attaches a player (game state only; not networking). A new player is put into
+   standby in the round scoring system, if not already present."
+  [world name]
+  (let [scoring (:scoring world)]
+    (assoc world :scoring (assoc scoring name (or (scoring name) 0)))))
+
+(defn detach
+  "Remove a player completely from the game state. (No changes to networking.)"
+  [world name]
+  (let [world' (assoc world
+                 :arena (dissoc (:arena world) name)
+                 :scoring (dissoc (:scoring world) name))]
+    (if (< (count (:arena world')) 2)
+      ;; Reduce is slight overkill, but will work for > 1 active player.
+      ;; (`if-let` would make more sense.)
+      (reduce remove-from-arena world' (keys (:arena world')))
+      world')))
+
 (defn start-round
   "Start a new round: reset all scores, put all players into the arena.
    TODO: the population pass needs to be a bit more random."
   [world]
-  (letfn [(into-arena [arena name]
-            (assoc arena name (or (arena name)
-                                  (pl/gen-player (find-space arena)))))]
-
-    (if (< (+ (count (:arena world))
-              (count (:scoring world))) 2)
-      (throw+ {:type ::NOT-ENOUGH-PLAYERS})
-      (assoc world
-        :arena (reduce (fn [a [name _]] (into-arena a name))
-                       (:arena world)
-                       (:scoring world))
-        :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
-                         (:scoring world)
-                         (:scoring world))))))
+  (if (< (+ (count (:arena world))
+            (count (:scoring world))) 2)
+    (throw+ {:type ::NOT-ENOUGH-PLAYERS})
+    (assoc world
+      :arena (reduce (fn [a [name _]] (into-arena a name))
+                     (:arena world)
+                     (:scoring world))
+      :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
+                       (:scoring world)
+                       (:scoring world)))))
 
 (defn fire
   "Takes, and returns, a complete world state. Also returns a journal.

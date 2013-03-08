@@ -35,10 +35,9 @@
           names->transmitters (assoc (:names->transmitters world)
                                 player-name
                                 (net/start-transmitter (:host origin) back-port))]
-      (assoc world
+      (assoc (t/attach world player-name)
         :origins->names origins->names
         :names->transmitters names->transmitters
-        :scoring (assoc (:scoring world) player-name 0)
         :journal [{:to player-name
                    :action :attached
                    :args {:host (:host origin) :port back-port}}]))
@@ -47,9 +46,7 @@
     ;; TODO: check for prior attachment.
     (let [tx (retrieve-transmitter world player)]
       (.close tx)
-      (assoc world
-        :arena (dissoc (:arena world) player)
-        :scoring (dissoc (:scoring world) player)
+      (assoc (t/detach world player)
         :names->transmitters (dissoc (:names->transmitters world) player)
         :origins->names (dissoc (:origins->names world) origin)
         :journal []))
@@ -84,11 +81,7 @@
   [port]
 
   ;; Test with strings for players - these are directly in the OSC at the moment.
-  (let [arena (-> {}
-                  (pl/add-player "Pa" (pl/gen-player [0 0 0]))
-                  (pl/add-player "Pb" (pl/gen-player [1 0 0]))
-                  (pl/add-player "Pc" (pl/gen-player [0 1 0])))
-        WORLD (atom {:arena arena
+  (let [WORLD (atom {:arena {}
                      :scoring {}
                      :origins->names {}
                      :names->transmitters {}})]
