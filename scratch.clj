@@ -143,6 +143,9 @@ state0
 
 (srv/examine g)
 
+(map (fn [[name f]] {:n name :pos (f [0 0 0])})
+     (:arena (srv/examine g)))
+
 (srv/close g)
 
 ;; --- Junk.
