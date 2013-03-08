@@ -61,8 +61,8 @@
       (is (:P1 (:arena world)))
       (is (:P2 (:arena world)))))
 
-  (testing "round start does not leave a single player in the arena"
-    (let [world {:arena {} :scoring {:P1 0}}]
+  (testing "round start fails if unsufficient players"
+    (let [world {:arena {} :scoring {}}]
       (is (thrown+? [:type ::t/NOT-ENOUGH-PLAYERS]
                     (t/start-round world)))))
 
@@ -78,7 +78,7 @@
       (is (nil? (:P (:arena world))))
       (is (nil? (:P (:scoring world))))))
 
-  (testing "detach does not leave one player in arena"
+  (testing "detach does not insufficient players in arena"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 0 1])))
@@ -104,7 +104,8 @@
               {:to :P2 :action :hit-by :args {:player :P1 :hit-points 9}}]
              (-> world
                  (t/fire :P1)
-                 (:journal)))))))
+                 (:journal))))))
+)
 
 (deftest sanity-check
   (testing "rogue in arena"
@@ -172,13 +173,29 @@
   (testing "knockout"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
-                    (pl/add-player :P2 (pl/gen-player [0 1 0])))
-          world0 {:arena arena :scoring {:P1 1 :P2 1}}
+                    (pl/add-player :P2 (pl/gen-player [0 1 0]))
+                    (pl/add-player :P3 (pl/gen-player [2 2 2])))
+          world0 {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
           world1 (t/fire world0 :P1)]
       (is (= [{:to :P1 :action :hit :args {:player :P2}}
               {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
               {:to m/BROADCAST :action :dead :args {:player :P2}}]
              (:journal world1)))
       (is (= 0 (-> world1 (:scoring) (:P2))))
-      (is (-> world1 (:arena) (:P1)))
+      (is (nil? (-> world1 (:arena) (:P2))))    ; P2 removed
+      (is (-> world1 (:arena) (:P1)))           ; P1 still in play
+      ))
+
+  (testing "knockout, end of round"
+    (let [arena (-> {}
+                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                    (pl/add-player :P2 (pl/gen-player [0 1 0])))
+          world0 {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
+          world1 (t/fire world0 :P1)]
+      (is (= [{:to :P1 :action :hit :args {:player :P2}}
+              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
+              {:to m/BROADCAST :action :dead :args {:player :P2}}]
+             (:journal world1)))
+      (is (= 0 (-> world1 (:scoring) (:P2))))
+      (is (nil? (-> world1 (:arena) (:P1))))    ; All players removed.
       (is (nil? (-> world1 (:arena) (:P2)))))))

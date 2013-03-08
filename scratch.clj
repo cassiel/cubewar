@@ -139,13 +139,11 @@ state0
 
 ;; --- Network testing.
 
-(def rs (srv/start-game 8123))
+(def g (srv/start-game 8123))
 
-(:receiver rs)
+(srv/examine g)
 
-@(:world rs)
-
-(.close (:receiver rs))
+(srv/close g)
 
 ;; --- Junk.
 
@@ -225,6 +223,10 @@ state0
 
 (t/start-round {:arena {}
                 :scoring {:P1 1 :P2 3}})
+
+(str ::pl/ALREADY-PRESENT)
+
+(str ::junk/junk)
 
 :cassiel.cubewar.players/ALREADY-PRESENT
 

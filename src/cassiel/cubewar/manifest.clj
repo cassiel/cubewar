@@ -14,6 +14,9 @@
 ;; Depth of fire (count includes origin position).
 (def FIRE-DEPTH VIEW-DEPTH)
 
+;; Minimum number of players allowed in-play. (Normally 2; 1 for testing.)
+(def MIN-IN-PLAY 2)
+
 ;; Initial score in new round.
 (def START-SCORE 10)
 

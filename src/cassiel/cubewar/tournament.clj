@@ -45,7 +45,7 @@
   (let [world' (assoc world
                  :arena (dissoc (:arena world) name)
                  :scoring (dissoc (:scoring world) name))]
-    (if (< (count (:arena world')) 2)
+    (if (< (count (:arena world')) m/MIN-IN-PLAY)
       ;; Reduce is slight overkill, but will work for > 1 active player.
       ;; (`if-let` would make more sense.)
       (reduce remove-from-arena world' (keys (:arena world')))
@@ -56,7 +56,7 @@
    TODO: the population pass needs to be a bit more random."
   [world]
   (if (< (+ (count (:arena world))
-            (count (:scoring world))) 2)
+            (count (:scoring world))) m/MIN-IN-PLAY)
     (throw+ {:type ::NOT-ENOUGH-PLAYERS})
     (assoc world
       :arena (reduce (fn [a [name _]] (into-arena a name))
@@ -94,6 +94,7 @@
                             :action :hit-by
                             :args {:player name :hit-points new-score}}]
                     ;; Re-score the victim, remove from arena if hit-points now zero.
+                    ;; Remove all from arena if one man standing.
                     (assoc world
                       :scoring (assoc scoring victim new-score)
                       :arena (if (pos? new-score) arena (dissoc arena victim))

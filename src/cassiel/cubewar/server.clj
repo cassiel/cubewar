@@ -4,8 +4,15 @@
                              [cube :as c]
                              [players :as pl]
                              [tournament :as t]
-                             [network :as net]))
+                             [network :as net])
+            (cassiel.zeroconf [server :as zs]))
   (:use [slingshot.slingshot :only [throw+]]))
+
+(defprotocol GAME
+  "State of a game."
+
+  (examine [this] "Look at the world state.")
+  (close [this] "Close the game server."))
 
 (defn retrieve-player
   [world origin]
@@ -51,6 +58,10 @@
         :origins->names (dissoc (:origins->names world) origin)
         :journal []))
 
+    :start-round
+    (assoc (t/start-round world)
+      :journal [])
+
     :handshake
     (assoc world :journal [{:to player :action :handshake-reply}])
 
@@ -67,6 +78,7 @@
   (:journal
    (swap! world
           (fn [w]
+            ;; TODO (here and watcher): use Slingshot catch.
             (try
               (service w origin (retrieve-player w origin) action args)
               (catch Exception exn
@@ -107,5 +119,14 @@
 
       (add-watch WORLD :key watcher))
 
-    {:receiver (net/start-receiver port (partial serve1 WORLD))
-     :world WORLD}))
+    (let [r (net/start-receiver port (partial serve1 WORLD))
+          zeroconf (zs/server :type "_cubewar._udp.local."
+                              :name "Cubewar"
+                              :port port
+                              :text "Default Cubewar server")
+          _ (zs/open zeroconf)]
+      (reify GAME
+        (examine [this] @WORLD)
+        (close [this]
+          (zs/close zeroconf)
+          (.close r))))))
