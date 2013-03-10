@@ -8,6 +8,14 @@
                              [tournament :as t])))
 
 (deftest basics
+  (testing "journalise"
+    (is (= {:journal [{:foo 99}]}
+           (t/journalise {} {:foo 99})))
+    (is (= {:journal [{:to m/BROADCAST :action :alert :args {:message "BOO!"}}]}
+           (t/journalise {} (t/broadcast-alert "BOO!"))))
+    (is (= {:journal [1 2 3]}
+           (t/journalise {} 1 2 3))))
+
   (testing "occupied"
     (is (t/occupied {:P (pl/gen-player [0 0 0])} [0 0 0]))
     (is (not (t/occupied {} [0 0 0])))
@@ -62,14 +70,28 @@
       (is (:P2 (:arena world)))))
 
   (testing "round start fails if unsufficient players"
-    (let [world {:arena {} :scoring {}}]
+    (let [world {:arena {:P1 (pl/gen-player [0 0 0])} :scoring {}}]
       (is (thrown+? [:type ::t/NOT-ENOUGH-PLAYERS]
                     (t/start-round world)))))
 
   (testing "can start round with one active player"
     (let [world {:arena {:P1 (pl/gen-player [0 0 0])}
-                 :scoring {:P2 0}}]
+                 :scoring {:P1 0 :P2 0}}]
       (is (= 2 (count (-> world (t/start-round) (:arena)))))))
+
+  (testing "attach doesn't start a game when not enough players"
+    (let [world {:arena {}
+                 :scoring {}}
+          world' (t/attach world :P2)]
+      (is (empty? (:arena world')))))
+
+  (testing "attach starts a game when enough players"
+    (let [world {:arena {}
+                 :scoring {:P1 0}}
+          world' (t/attach world :P2)]
+      (is (= [{:to m/BROADCAST :action :alert :args {:message "game on"}}]
+             (:journal world')))
+      (is (= 2 (count (:arena world'))))))
 
   (testing "detach removes from arena and standby."
     (let [arena (-> {}
@@ -78,12 +100,14 @@
       (is (nil? (:P (:arena world))))
       (is (nil? (:P (:scoring world))))))
 
-  (testing "detach does not insufficient players in arena"
+  (testing "detach does not leave too few players in arena"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 0 1])))
           world (t/detach {:arena arena :scoring {:P1 10 :P2 10}} :P1)]
-      (is (nil? (:P2 (:arena world)))))))
+      (is (nil? (:P2 (:arena world))))
+      (is (= [{:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}}]
+             (:journal world))))))
 
 (deftest fire-journal
   (testing "miss"
@@ -182,9 +206,9 @@
               {:to m/BROADCAST :action :dead :args {:player :P2}}]
              (:journal world1)))
       (is (= 0 (-> world1 (:scoring) (:P2))))
-      (is (nil? (-> world1 (:arena) (:P2))))    ; P2 removed
-      (is (-> world1 (:arena) (:P1)))           ; P1 still in play
-      ))
+      (is (:P1 (:arena world1)))
+      (is (nil? (:P2 (:arena world1))))
+      (is (:P3 (:arena world1)))))
 
   (testing "knockout, end of round"
     (let [arena (-> {}
@@ -194,8 +218,11 @@
           world1 (t/fire world0 :P1)]
       (is (= [{:to :P1 :action :hit :args {:player :P2}}
               {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
-              {:to m/BROADCAST :action :dead :args {:player :P2}}]
+              {:to m/BROADCAST :action :dead :args {:player :P2}}
+              {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
+              {:to m/BROADCAST :action :alert :args {:message "game on"}}]
              (:journal world1)))
-      (is (= 0 (-> world1 (:scoring) (:P2))))
-      (is (nil? (-> world1 (:arena) (:P1))))    ; All players removed.
-      (is (nil? (-> world1 (:arena) (:P2)))))))
+      ;; Players have been put back into play:
+      (is (-> world1 (:arena) (:P1)))
+      (is (-> world1 (:arena) (:P2)))
+      (is (-> world1 (:arena) (:P3))))))

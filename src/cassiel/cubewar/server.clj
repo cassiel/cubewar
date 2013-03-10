@@ -90,7 +90,7 @@
 ;; Actual server.
 
 (defn start-game
-  [port]
+  [name port]
 
   ;; Test with strings for players - these are directly in the OSC at the moment.
   (let [WORLD (atom {:arena {}
@@ -121,9 +121,14 @@
 
     (let [r (net/start-receiver port (partial serve1 WORLD))
           zeroconf (zs/server :type "_cubewar._udp.local."
-                              :name "Cubewar"
+                              :name name
                               :port port
-                              :text "Default Cubewar server")
+                              :text (str "Cubewar server "
+                                         (System/getProperty "cubewar.version")
+                                         " on "
+                                         (System/getProperty "os.name")
+                                         \space
+                                         (System/getProperty "os.version")))
           _ (zs/open zeroconf)]
       (reify GAME
         (examine [this] @WORLD)

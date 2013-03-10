@@ -139,7 +139,7 @@ state0
 
 ;; --- Network testing.
 
-(def g (srv/start-game 8123))
+(def g (srv/start-game "Cubewar-Lein" 8123))
 
 (srv/examine g)
 
@@ -235,3 +235,21 @@ state0
 
 (= ::pl/ALREADY-PRESENT :pl/ALREADY-PRESENT)
 (= ::pl/ALREADY-PRESENT :cassiel.cubewar.players/ALREADY-PRESENT)
+
+(keys
+ (System/getenv))
+
+(keys
+ (System/getProperties))
+
+(get
+ (System/getProperties)
+ "cubewar.version")
+
+(get
+ (System/getProperties)
+ "os.name")
+
+(System/getProperty "os.version")
+
+(conj nil "A")

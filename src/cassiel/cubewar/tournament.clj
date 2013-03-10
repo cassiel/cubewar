@@ -9,6 +9,18 @@
                              [state-navigation :as n]))
   (:use [slingshot.slingshot :only [try+ throw+]]))
 
+(defn journalise
+  "Append a journal entry. (Doesn't remove old entries.)"
+  [world & entries]
+  (assoc world :journal
+         (reduce (fn [j e] (conj (vec j) e))
+                 (:journal world)
+                 entries)))
+
+(defn broadcast-alert
+  [msg]
+  {:to m/BROADCAST :action :alert :args {:message msg}})
+
 (defn occupied [arena pos]
   (some (fn [[_ pos-fn]] (= pos (pos-fn [0 0 0]))) arena))
 
@@ -32,25 +44,6 @@
   (assoc world
     :arena (dissoc (:arena world) p)))
 
-(defn attach
-  "Attaches a player (game state only; not networking). A new player is put into
-   standby in the round scoring system, if not already present."
-  [world name]
-  (let [scoring (:scoring world)]
-    (assoc world :scoring (assoc scoring name (or (scoring name) 0)))))
-
-(defn detach
-  "Remove a player completely from the game state. (No changes to networking.)"
-  [world name]
-  (let [world' (assoc world
-                 :arena (dissoc (:arena world) name)
-                 :scoring (dissoc (:scoring world) name))]
-    (if (< (count (:arena world')) m/MIN-IN-PLAY)
-      ;; Reduce is slight overkill, but will work for > 1 active player.
-      ;; (`if-let` would make more sense.)
-      (reduce remove-from-arena world' (keys (:arena world')))
-      world')))
-
 (defn start-round
   "Start a new round: reset all scores, put all players into the arena.
    TODO: the population pass needs to be a bit more random."
@@ -66,6 +59,45 @@
                        (:scoring world)
                        (:scoring world)))))
 
+(defn check-for-new-round
+  "See whether we have an empty arena, and can start a new round (which may
+   fail if we don't have enough players waiting)."
+  [world]
+  (if (empty? (:arena world))
+    (try+
+     (journalise
+      (start-round world)
+      (broadcast-alert "game on"))
+     (catch
+         [:type ::NOT-ENOUGH-PLAYERS]
+         _
+       world))
+
+    world))
+
+(defn attach
+  "Attaches a player (game state only; not networking). A new player is put into
+   standby in the round scoring system, if not already present."
+  [world name]
+  (let [scoring (:scoring world)]
+    (check-for-new-round
+     (assoc world
+       :scoring (assoc scoring name (or (scoring name) 0))))))
+
+(defn detach
+  "Remove a player completely from the game state. (No changes to networking.)"
+  [world name]
+  (let [world' (assoc world
+                 :arena (dissoc (:arena world) name)
+                 :scoring (dissoc (:scoring world) name))]
+    (if (< (count (:arena world')) m/MIN-IN-PLAY)
+      ;; Reduce is slight overkill, but will work for > 1 active player.
+      ;; (`if-let` would make more sense.)
+      (journalise
+       (reduce remove-from-arena world' (keys (:arena world')))
+       {:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}})
+      world')))
+
 (defn fire
   "Takes, and returns, a complete world state. Also returns a journal.
    If a player is not in the scoring system, it's an internal error.
@@ -80,8 +112,8 @@
           (throw+ {:type ::NOT-IN-SYSTEM :player name})
 
           (nil? me-playing)
-          (assoc world
-            :journal [{:to name :action :error :args {:message "not currently in play"}}])
+          (journalise world
+                      {:to name :action :error :args {:message "not currently in play"}})
 
           :else
           (let [victim (v/fire arena me-playing)]
@@ -89,25 +121,45 @@
               (let [old-score (get scoring victim)]
                 (if old-score
                   (let [new-score (dec old-score)
-                        j1 {:to name :action :hit :args {:player victim}}
-                        j2 {:to victim
-                            :action :hit-by
-                            :args {:player name :hit-points new-score}}]
-                    ;; Re-score the victim, remove from arena if hit-points now zero.
-                    ;; Remove all from arena if one man standing.
-                    (assoc world
-                      :scoring (assoc scoring victim new-score)
-                      :arena (if (pos? new-score) arena (dissoc arena victim))
-                      :journal (if (pos? new-score)
-                                 [j1 j2]
-                                 ;; TODO broadcast messages.
-                                 [j1 j2 {:to m/BROADCAST
-                                         :action :dead
-                                         :args {:player victim}}])))
+                        ;; Report the hit (to shooter and to victim):
+                        world
+                        (journalise world
+                                    {:to name :action :hit :args {:player victim}}
+                                    {:to victim
+                                     :action :hit-by
+                                     :args {:player name :hit-points new-score}})
+
+
+                        ;; If player killed, broadcast it:
+                        world
+                        (if-not (pos? new-score)
+                          (journalise world {:to m/BROADCAST
+                                             :action :dead
+                                             :args {:player victim}})
+                          world)
+
+                        ;; Remove player from arena if dead:
+                        arena (if (pos? new-score) arena (dissoc arena victim))
+
+                        ;; Empty arena (and report game end) if last player:
+
+                        last-player? (= (count arena) 1)
+
+                        arena (if last-player? {} arena)
+
+                        world (if last-player?
+                                (journalise world
+                                            (broadcast-alert (str "round over, winner " name)))
+                                world)]
+
+                    (check-for-new-round
+                     (assoc world
+                       :scoring (assoc scoring victim new-score)
+                       :arena arena)))
+
                   (throw+ {:type ::NOT-IN-SYSTEM :player victim})))
 
-              (assoc world
-                :journal [{:to name :action :miss}]))))))
+              (journalise world {:to name :action :miss}))))))
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view."
@@ -127,13 +179,13 @@
         (catch
             [:type ::n/NOT-EMPTY]
             _
-          (assoc world :journal [{:to name :action :blocked}]))
+          (journalise world {:to name :action :blocked}))
 
         (catch
             [:type ::n/NOT-IN-PLAY]
             _
-          (assoc world :journal [{:to name
-                                  :action :error
-                                  :args {:message "not currently in play"}}])))
+          (journalise world {:to name
+                             :action :error
+                             :args {:message "not currently in play"}})))
 
       (throw+ {:type ::BAD-ACTION :action action}))))
