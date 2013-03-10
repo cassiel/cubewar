@@ -161,8 +161,26 @@
 
               (journalise world {:to name :action :miss}))))))
 
+(def position-altering #{:forward})
+
+(defn transmit-all-views
+  "For each active player, send it its own (new) view."
+  [world]
+
+  (reduce (fn [w name]
+            (let [a (:arena world)
+                  me (get a name)]
+              (journalise w {:to name
+                             :action :view
+                             :args (v/dict-format (v/look-plane a me))})))
+          world
+          ;; We reduce over the keys so that we can sort them for unit-testing.
+          (sort (keys (:arena world)))))
+
 (defn move
-  "Perform a cube move. We report `:blocked` or a new view."
+  "Perform a cube move. We report `:blocked` or a new view. If we move,
+   we actually have to send views to all active players, since they might
+   be looking at the guy who's moving."
   [world name action]
   (let [{:keys [arena]} world
         f (c/manoeuvres action)]
@@ -170,12 +188,16 @@
       (try+
         (let [arena' (n/navigate arena name f)
               me (get arena' name)
-              view (v/look-plane arena' me)]
-          (assoc world
-            :arena arena'
-            :journal [{:to name
-                       :action :view
-                       :args (assoc (v/dict-format view) :manoeuvre action)}]))
+              view (v/look-plane arena' me)
+              world' (assoc world :arena arena')
+              ]
+          (if (position-altering action)
+            ;; Send appropriate new view to all players:
+            (transmit-all-views world')
+            ;; Only affects me:
+            (journalise world' {:to name
+                                :action :view
+                                :args (assoc (v/dict-format view) :manoeuvre action)})))
         (catch
             [:type ::n/NOT-EMPTY]
             _

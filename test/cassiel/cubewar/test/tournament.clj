@@ -142,16 +142,35 @@
                     (-> world (t/fire :P1)))))))
 
 (deftest move-journal
-  (testing "forward OK"
+  (testing "forward OK, one player"
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                            :x1 {:y0 {:player :P} :y1 :empty :y2 :wall}
                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}
-                                           :manoeuvre :forward}}]
+                                           #_ :manoeuvre #_ :forward}}]
              (-> world
                  (t/move :P :forward)
+                 (:journal))))))
+
+  (testing "forward OK, two players"
+    (let [arena (-> {}
+                    (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                    (pl/add-player :P2 (pl/gen-player [1 0 0])))
+          world {:arena arena :scoring nil}]
+      ;; The order of these journal items is implementation-dependent (we reduce over
+      ;; the set of active players). TODO: we could sort them first.
+      (is (= [{:to :P1 :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                            :x1 {:y0 {:player :P1} :y1 :empty :y2 :wall}
+                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}
+                                            #_ :manoeuvre #_ :forward}}
+              ;; No manoeuvre for P2.
+              {:to :P2 :action :view :args {:x0 {:y0 :empty :y1 {:player :P1} :y2 :empty}
+                                            :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                            :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
+             (-> world
+                 (t/move :P1 :forward)
                  (:journal))))))
 
   (testing "forward blocked"

@@ -253,3 +253,7 @@ state0
 (System/getProperty "os.version")
 
 (conj nil "A")
+
+(#{:A} :B)
+
+(sort [:B :A])

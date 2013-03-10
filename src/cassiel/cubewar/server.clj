@@ -78,14 +78,15 @@
   (:journal
    (swap! world
           (fn [w]
-            ;; TODO (here and watcher): use Slingshot catch.
-            (try
-              (service w origin (retrieve-player w origin) action args)
-              (catch Exception exn
-                (do
-                  (println "SERVICE exception: " exn)
-                  (.printStackTrace exn)
-                  w)))))))              ; TODO Empty journal on failure.
+            (let [w' (dissoc w :journal)]
+              ;; TODO (here and watcher): use Slingshot catch.
+              (try
+                (service w' origin (retrieve-player w' origin) action args)
+                (catch Exception exn
+                  (do
+                    (println "SERVICE exception: " exn)
+                    (.printStackTrace exn)
+                    w'))))))))
 
 ;; Actual server.
 
