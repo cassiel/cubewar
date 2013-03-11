@@ -84,7 +84,13 @@
     (let [world (t/start-round {:arena {}
                                 :scoring {:P1 0 :P2 0}})]
       (is (= 2 (count (:arena world))))
-      (is (= [{:to m/BROADCAST :action :start-round}]
+      (is (= [{:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+              {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+               ]
              (:journal world)))))
 
   (testing "attach doesn't start a game when not enough players"
@@ -98,7 +104,12 @@
                  :scoring {:P1 0}}
           world' (t/attach world :P2)]
       (is (= [{:to :P2 :action :welcome}
-              {:to m/BROADCAST :action :start-round}]
+              {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+              {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (:journal world')))
       (is (= 2 (count (:arena world'))))))
 
@@ -250,7 +261,15 @@
               {:to m/BROADCAST :action :dead :args {:player :P2}}
               {:to m/BROADCAST :action :end-round}
               {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
-              {:to m/BROADCAST :action :start-round}]
+              {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+              {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+              {:to :P3 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                                   :x1 {:y0 {:player :P3} :y1 :empty :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (:journal world1)))
       ;; Players have been put back into play:
       (is (-> world1 (:arena) (:P1)))

@@ -44,6 +44,25 @@
   (assoc world
     :arena (dissoc (:arena world) p)))
 
+(defn transmit-all-views
+  "For each active player, send it its own (new) view.
+
+   Optional `arg-modifier` takes args and name, and returns an args, possibly altered.
+   (Used for adding `:manoeuvre` information.)"
+  [world arg-modifier action]
+
+  (reduce (fn [w name]
+            (let [a (:arena world)
+                  me (get a name)
+                  args (v/dict-format (v/look-plane a me))
+                  args' (if arg-modifier (arg-modifier args name) args)]
+              (journalise w {:to name
+                             :action action
+                             :args args'})))
+          world
+          ;; We reduce over the keys so that we can sort them for unit-testing.
+          (sort (keys (:arena world)))))
+
 (defn start-round
   "Start a new round: reset all scores, put all players into the arena.
    TODO: the population pass needs to be a bit more random."
@@ -51,7 +70,7 @@
   (if (< (+ (count (:arena world))
             (count (:scoring world))) m/MIN-IN-PLAY)
     (throw+ {:type ::NOT-ENOUGH-PLAYERS})
-    (journalise
+    (transmit-all-views
      (assoc world
        :arena (reduce (fn [a [name _]] (into-arena a name))
                       (:arena world)
@@ -59,7 +78,8 @@
        :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
                         (:scoring world)
                         (:scoring world)))
-     {:to m/BROADCAST :action :start-round})))
+     nil
+     :start-round)))
 
 (defn check-for-new-round
   "See whether we have an empty arena, and can start a new round (which may
@@ -145,9 +165,7 @@
                         arena (if (pos? new-score) arena (dissoc arena victim))
 
                         ;; Empty arena (and report game end) if last player:
-
                         last-player? (= (count arena) 1)
-
                         arena (if last-player? {} arena)
 
                         world (if last-player?
@@ -156,6 +174,7 @@
                                             (broadcast-alert (str "round over, winner " name)))
                                 world)]
 
+                    ;; TODO: we probably shouldn't do this immediately.
                     (check-for-new-round
                      (assoc world
                        :scoring (assoc scoring victim new-score)
@@ -166,25 +185,6 @@
               (journalise world {:to name :action :miss}))))))
 
 (def position-altering #{:forward})
-
-(defn transmit-all-move-views
-  "For each active player, send it its own (new) view. The player actually making
-   the manoeuvre needs to carry a :manoeuvre hint to make it animate."
-  [world mover]
-
-  (reduce (fn [w name]
-            (let [a (:arena world)
-                  me (get a name)
-                  args (v/dict-format (v/look-plane a me))
-                  args' (if (= name mover)
-                          (assoc args :manoeuvre :forward)
-                          args)]
-              (journalise w {:to name
-                             :action :view
-                             :args args'})))
-          world
-          ;; We reduce over the keys so that we can sort them for unit-testing.
-          (sort (keys (:arena world)))))
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view. If we move,
@@ -202,7 +202,13 @@
               ]
           (if (position-altering action)
             ;; Send appropriate new view to all players:
-            (transmit-all-move-views world' name)
+            #_ (transmit-all-move-views world' name)
+            (transmit-all-views
+             world'
+             (fn [args n] (if (= n name)
+                           (assoc args :manoeuvre :forward)
+                           args))
+             :view)
             ;; Only affects me:
             (journalise world' {:to name
                                 :action :view

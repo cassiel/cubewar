@@ -42,12 +42,13 @@
           names->transmitters (assoc (:names->transmitters world)
                                 player-name
                                 (net/start-transmitter (:host origin) back-port))]
-      (assoc (t/attach world player-name)
-        :origins->names origins->names
-        :names->transmitters names->transmitters
-        :journal [{:to player-name
-                   :action :attached
-                   :args {:host (:host origin) :port back-port}}]))
+      (t/journalise
+       (assoc (t/attach world player-name)
+         :origins->names origins->names
+         :names->transmitters names->transmitters)
+       {:to player-name
+        :action :attached
+        :args {:host (:host origin) :port back-port}}))
 
     :detach
     ;; TODO: check for prior attachment.
@@ -55,15 +56,13 @@
       (.close tx)
       (assoc (t/detach world player)
         :names->transmitters (dissoc (:names->transmitters world) player)
-        :origins->names (dissoc (:origins->names world) origin)
-        :journal []))
+        :origins->names (dissoc (:origins->names world) origin)))
 
     :start-round
-    (assoc (t/start-round world)
-      :journal [])
+    (t/start-round world)
 
     :handshake
-    (assoc world :journal [{:to player :action :handshake-reply}])
+    (t/journalise world {:to player :action :handshake-reply})
 
     :fire (t/fire world player)
 
