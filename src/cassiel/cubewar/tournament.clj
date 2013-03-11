@@ -51,13 +51,15 @@
   (if (< (+ (count (:arena world))
             (count (:scoring world))) m/MIN-IN-PLAY)
     (throw+ {:type ::NOT-ENOUGH-PLAYERS})
-    (assoc world
-      :arena (reduce (fn [a [name _]] (into-arena a name))
-                     (:arena world)
-                     (:scoring world))
-      :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
-                       (:scoring world)
-                       (:scoring world)))))
+    (journalise
+     (assoc world
+       :arena (reduce (fn [a [name _]] (into-arena a name))
+                      (:arena world)
+                      (:scoring world))
+       :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
+                        (:scoring world)
+                        (:scoring world)))
+     {:to m/BROADCAST :action :start-round})))
 
 (defn check-for-new-round
   "See whether we have an empty arena, and can start a new round (which may
@@ -65,9 +67,7 @@
   [world]
   (if (empty? (:arena world))
     (try+
-     (journalise
-      (start-round world)
-      (broadcast-alert "game on"))
+     (start-round world)
      (catch
          [:type ::NOT-ENOUGH-PLAYERS]
          _
@@ -81,8 +81,10 @@
   [world name]
   (let [scoring (:scoring world)]
     (check-for-new-round
-     (assoc world
-       :scoring (assoc scoring name (or (scoring name) 0))))))
+     (journalise
+      (assoc world
+        :scoring (assoc scoring name (or (scoring name) 0)))
+      {:to name :action :welcome}))))
 
 (defn detach
   "Remove a player completely from the game state. (No changes to networking.)"
@@ -95,7 +97,8 @@
       ;; (`if-let` would make more sense.)
       (journalise
        (reduce remove-from-arena world' (keys (:arena world')))
-       {:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}})
+       {:to m/BROADCAST :action :end-round}
+       (broadcast-alert "round over (no winner)"))
       world')))
 
 (defn fire
@@ -149,6 +152,7 @@
 
                         world (if last-player?
                                 (journalise world
+                                            {:to m/BROADCAST :action :end-round}
                                             (broadcast-alert (str "round over, winner " name)))
                                 world)]
 
@@ -163,16 +167,21 @@
 
 (def position-altering #{:forward})
 
-(defn transmit-all-views
-  "For each active player, send it its own (new) view."
-  [world]
+(defn transmit-all-move-views
+  "For each active player, send it its own (new) view. The player actually making
+   the manoeuvre needs to carry a :manoeuvre hint to make it animate."
+  [world mover]
 
   (reduce (fn [w name]
             (let [a (:arena world)
-                  me (get a name)]
+                  me (get a name)
+                  args (v/dict-format (v/look-plane a me))
+                  args' (if (= name mover)
+                          (assoc args :manoeuvre :forward)
+                          args)]
               (journalise w {:to name
                              :action :view
-                             :args (v/dict-format (v/look-plane a me))})))
+                             :args args'})))
           world
           ;; We reduce over the keys so that we can sort them for unit-testing.
           (sort (keys (:arena world)))))
@@ -193,7 +202,7 @@
               ]
           (if (position-altering action)
             ;; Send appropriate new view to all players:
-            (transmit-all-views world')
+            (transmit-all-move-views world' name)
             ;; Only affects me:
             (journalise world' {:to name
                                 :action :view

@@ -74,10 +74,18 @@
       (is (thrown+? [:type ::t/NOT-ENOUGH-PLAYERS]
                     (t/start-round world)))))
 
-  (testing "can start round with one active player"
-    (let [world {:arena {:P1 (pl/gen-player [0 0 0])}
-                 :scoring {:P1 0 :P2 0}}]
-      (is (= 2 (count (-> world (t/start-round) (:arena)))))))
+  ;; We shouldn't start a round unless the arena is empty.
+  #_ (testing "can start round with one active player"
+       (let [world {:arena {:P1 (pl/gen-player [0 0 0])}
+                    :scoring {:P1 0 :P2 0}}]
+         (is (= 2 (count (-> world (t/start-round) (:arena)))))))
+
+  (testing "can start round manually, with journal generated"
+    (let [world (t/start-round {:arena {}
+                                :scoring {:P1 0 :P2 0}})]
+      (is (= 2 (count (:arena world))))
+      (is (= [{:to m/BROADCAST :action :start-round}]
+             (:journal world)))))
 
   (testing "attach doesn't start a game when not enough players"
     (let [world {:arena {}
@@ -85,11 +93,12 @@
           world' (t/attach world :P2)]
       (is (empty? (:arena world')))))
 
-  (testing "attach starts a game when enough players"
+  (testing "attach starts a round when enough players"
     (let [world {:arena {}
                  :scoring {:P1 0}}
           world' (t/attach world :P2)]
-      (is (= [{:to m/BROADCAST :action :alert :args {:message "game on"}}]
+      (is (= [{:to :P2 :action :welcome}
+              {:to m/BROADCAST :action :start-round}]
              (:journal world')))
       (is (= 2 (count (:arena world'))))))
 
@@ -106,7 +115,8 @@
                     (pl/add-player :P2 (pl/gen-player [0 0 1])))
           world (t/detach {:arena arena :scoring {:P1 10 :P2 10}} :P1)]
       (is (nil? (:P2 (:arena world))))
-      (is (= [{:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}}]
+      (is (= [{:to m/BROADCAST :action :end-round}
+              {:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}}]
              (:journal world))))))
 
 (deftest fire-journal
@@ -149,7 +159,7 @@
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                            :x1 {:y0 {:player :P} :y1 :empty :y2 :wall}
                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}
-                                           #_ :manoeuvre #_ :forward}}]
+                                           :manoeuvre :forward}}]
              (-> world
                  (t/move :P :forward)
                  (:journal))))))
@@ -164,7 +174,7 @@
       (is (= [{:to :P1 :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                             :x1 {:y0 {:player :P1} :y1 :empty :y2 :wall}
                                             :x2 {:y0 :empty :y1 :empty :y2 :wall}
-                                            #_ :manoeuvre #_ :forward}}
+                                            :manoeuvre :forward}}
               ;; No manoeuvre for P2.
               {:to :P2 :action :view :args {:x0 {:y0 :empty :y1 {:player :P1} :y2 :empty}
                                             :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
@@ -238,8 +248,9 @@
       (is (= [{:to :P1 :action :hit :args {:player :P2}}
               {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
               {:to m/BROADCAST :action :dead :args {:player :P2}}
+              {:to m/BROADCAST :action :end-round}
               {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
-              {:to m/BROADCAST :action :alert :args {:message "game on"}}]
+              {:to m/BROADCAST :action :start-round}]
              (:journal world1)))
       ;; Players have been put back into play:
       (is (-> world1 (:arena) (:P1)))

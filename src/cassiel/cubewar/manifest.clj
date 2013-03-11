@@ -14,7 +14,9 @@
 ;; Depth of fire (count includes origin position).
 (def FIRE-DEPTH VIEW-DEPTH)
 
-;; Minimum number of players allowed in-play. (Normally 2; 1 for manual testing.)
+;; Minimum number of players allowed in-play. (Normally 2; 1 for manual testing,
+;; but 1 could cause problems since there would be no way to end a round should
+;; the second player detach.)
 (def MIN-IN-PLAY 2)
 
 ;; Initial score in new round.
