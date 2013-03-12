@@ -54,11 +54,13 @@
   (reduce (fn [w name]
             (let [a (:arena world)
                   me (get a name)
-                  args (v/dict-format (v/look-plane a me))
-                  args' (if arg-modifier (arg-modifier args name) args)]
-              (journalise w {:to name
-                             :action action
-                             :args args'})))
+                  argsXXX (v/dict-format (v/look-plane a me))
+                  argsXXX' (if arg-modifier (arg-modifier argsXXX name) argsXXX)]
+              (as-> (v/dict-format (v/look-plane a me)) args
+                    (if arg-modifier (arg-modifier args name) args)
+                    (journalise w {:to name
+                                   :action action
+                                   :args args}))))
           world
           ;; We reduce over the keys so that we can sort them for unit-testing.
           (sort (keys (:arena world)))))
