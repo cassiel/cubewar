@@ -257,3 +257,10 @@ state0
 (#{:A} :B)
 
 (sort [:B :A])
+
+;; --- MD5
+
+
+(org.apache.commons.codec.digest.DigestUtils/md5Hex "Hello")
+
+16rA0

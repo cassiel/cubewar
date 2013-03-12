@@ -7,6 +7,7 @@
                  [net.loadbang/net.loadbang.osc "1.5.0"]
                  [org.clojure/java.jdbc "0.2.3"]
                  [org.hsqldb/hsqldb "2.2.9"]
+                 [commons-codec/commons-codec "1.7"]
                  [eu.cassiel/clojure-zeroconf "1.1.0"]]
   :plugins [[lein-ring "0.8.2"]
             [lein-marginalia "0.7.1"]]

@@ -43,8 +43,10 @@
 
 ;; --- Using package.
 
-(def db (db/mem-db "test1"))
+(def db (db/file-db "/test_hsqldb"))
 
 (db/clear db)
+
+(db/authenticate db "User" "Pass")
 
 (db/num-users db)
