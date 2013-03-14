@@ -12,6 +12,7 @@
   "State of a game."
 
   (examine [this] "Look at the world state.")
+  (interact [this action args] "Interact with the server as a pretend client")
   (close [this] "Close the game server."))
 
 (defn retrieve-player
@@ -132,6 +133,10 @@
           _ (zs/open zeroconf)]
       (reify GAME
         (examine [this] @WORLD)
+        (interact [this action args] (serve1 WORLD
+                                             {:host "localhost" :port 8888}
+                                             action
+                                             args))
         (close [this]
           (zs/close zeroconf)
           (.close r))))))

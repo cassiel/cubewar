@@ -8,14 +8,14 @@
 (defn look
   "Examine a cell coordinate from a player's perspective. The player will only see
    itself at [0 0 0] if it's in the state.
-   Possible results: :empty, :wall, {:player name}."
+   Possible results: :empty, :wall, {:player {:name name}}."
   [state me pos]
   (let [abs-pos (me pos)]
     (if (c/wall? abs-pos)
       :wall
       (let [p (pl/player-at state abs-pos)]
         (if p
-          {:player p}
+          {:player {:name p}}
           :empty)))))
 
 (defn look-plane
@@ -36,7 +36,7 @@
     (look state me [0 y 0])))
 
 (defn fire
-  "A named player fires a shot. Return nil or playername."
+  "A named player fires a shot. Return nil or player map."
   [state me]
   (let [view (rest (look-ahead state me))]
     ;; Look for first non-`:empty`, non-`:wall`, if any.

@@ -17,7 +17,7 @@
       (let [new-p (comp p nav-fn)
             dest-cell (v/look state new-p [0 0 0])]
         ;; The destination must be empty, or it must (already) be us:
-        (if (#{:empty {:player name}} dest-cell)
+        (if (#{:empty {:player {:name name}}} dest-cell)
           (assoc state name new-p)
           (throw+ {:type ::NOT-EMPTY :contents dest-cell})))
       (throw+ {:type ::NOT-IN-PLAY :name name}))))

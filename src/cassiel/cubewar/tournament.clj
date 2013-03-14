@@ -47,23 +47,31 @@
 (defn transmit-all-views
   "For each active player, send it its own (new) view.
 
-   Optional `arg-modifier` takes args and name, and returns an args, possibly altered.
-   (Used for adding `:manoeuvre` information.)"
-  [world arg-modifier action]
+   `manoeuvre-map` is either empty or contains a (singleton) map from player name to
+   the manoeuvre just performed."
+  [world action manoeuvre-map]
 
-  (reduce (fn [w name]
-            (let [a (:arena world)
-                  me (get a name)
-                  argsXXX (v/dict-format (v/look-plane a me))
-                  argsXXX' (if arg-modifier (arg-modifier argsXXX name) argsXXX)]
-              (as-> (v/dict-format (v/look-plane a me)) args
-                    (if arg-modifier (arg-modifier args name) args)
-                    (journalise w {:to name
-                                   :action action
-                                   :args args}))))
-          world
-          ;; We reduce over the keys so that we can sort them for unit-testing.
-          (sort (keys (:arena world)))))
+  (letfn [(manoeuvre-cell
+            ;; Add `:manoeuvre` to cell if it contains a player in our map.
+            [c]
+            (if-let [p (:player c)]
+              (if-let [m (manoeuvre-map (:name p))]
+                {:player (assoc p :manoeuvre m)}
+                c)
+              c))]
+
+    (reduce (fn [w name]
+              (let [a (:arena world)
+                    me (get a name)
+                    view (v/look-plane a me)
+                    view' (map (partial map manoeuvre-cell) view)]
+                (as-> (v/dict-format view') args
+                      (journalise w {:to name
+                                     :action action
+                                     :args args}))))
+            world
+            ;; We reduce over the keys so that we can sort them for unit-testing.
+            (sort (keys (:arena world))))))
 
 (defn start-round
   "Start a new round: reset all scores, put all players into the arena.
@@ -80,8 +88,8 @@
        :scoring (reduce (fn [s [name _]] (assoc s name m/START-SCORE))
                         (:scoring world)
                         (:scoring world)))
-     nil
-     :start-round)))
+     :start-round
+     {})))
 
 (defn check-for-new-round
   "See whether we have an empty arena, and can start a new round (which may
@@ -141,18 +149,19 @@
                       {:to name :action :error :args {:message "not currently in play"}})
 
           :else
-          (let [victim (v/fire arena me-playing)]
-            (if victim
-              (let [old-score (get scoring victim)]
+          (let [victim (v/fire arena me-playing)
+                vname (when-let [n (:name victim)] n)]
+            (if vname
+              (let [old-score (get scoring vname)]
                 (if old-score
                   (let [new-score (dec old-score)
                         ;; Report the hit (to shooter and to victim):
                         world
                         (journalise world
                                     {:to name :action :hit :args {:player victim}}
-                                    {:to victim
+                                    {:to vname
                                      :action :hit-by
-                                     :args {:player name :hit-points new-score}})
+                                     :args {:player {:name name} :hit-points new-score}})
 
 
                         ;; If player killed, broadcast it:
@@ -164,7 +173,7 @@
                           world)
 
                         ;; Remove player from arena if dead:
-                        arena (if (pos? new-score) arena (dissoc arena victim))
+                        arena (if (pos? new-score) arena (dissoc arena vname))
 
                         ;; Empty arena (and report game end) if last player:
                         last-player? (= (count arena) 1)
@@ -179,14 +188,12 @@
                     ;; TODO: we probably shouldn't do this immediately.
                     (check-for-new-round
                      (assoc world
-                       :scoring (assoc scoring victim new-score)
+                       :scoring (assoc scoring vname new-score)
                        :arena arena)))
 
-                  (throw+ {:type ::NOT-IN-SYSTEM :player victim})))
+                  (throw+ {:type ::NOT-IN-SYSTEM :player vname})))
 
               (journalise world {:to name :action :miss}))))))
-
-(def position-altering #{:forward})
 
 (defn move
   "Perform a cube move. We report `:blocked` or a new view. If we move,
@@ -202,29 +209,23 @@
               view (v/look-plane arena' me)
               world' (assoc world :arena arena')
               ]
-          (if (position-altering action)
-            ;; Send appropriate new view to all players:
-            #_ (transmit-all-move-views world' name)
-            (transmit-all-views
-             world'
-             (fn [args n] (if (= n name)
-                           (assoc args :manoeuvre :forward)
-                           args))
-             :view)
-            ;; Only affects me:
-            (journalise world' {:to name
-                                :action :view
-                                :args (assoc (v/dict-format view) :manoeuvre action)})))
-        (catch
-            [:type ::n/NOT-EMPTY]
-            _
-          (journalise world {:to name :action :blocked}))
+          ;; Send appropriate new view to all players:
+          #_ (transmit-all-move-views world' name)
+          (transmit-all-views
+           world'
+           :view
+           {name action}))
 
-        (catch
-            [:type ::n/NOT-IN-PLAY]
-            _
-          (journalise world {:to name
-                             :action :error
-                             :args {:message "not currently in play"}})))
+          (catch
+              [:type ::n/NOT-EMPTY]
+              _
+            (journalise world {:to name :action :blocked}))
+
+          (catch
+              [:type ::n/NOT-IN-PLAY]
+              _
+            (journalise world {:to name
+                               :action :error
+                               :args {:message "not currently in play"}})))
 
       (throw+ {:type ::BAD-ACTION :action action}))))

@@ -85,12 +85,15 @@
                                 :scoring {:P1 0 :P2 0}})]
       (is (= 2 (count (:arena world))))
       (is (= [{:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P1}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
               {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
-                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
-               ]
+                                                   :x1 {:y0 {:player {:name :P2}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
+                                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (:journal world)))))
 
   (testing "attach doesn't start a game when not enough players"
@@ -105,10 +108,14 @@
           world' (t/attach world :P2)]
       (is (= [{:to :P2 :action :welcome}
               {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P1}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
               {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P2}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (:journal world')))
       (is (= 2 (count (:arena world'))))))
@@ -145,8 +152,8 @@
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10 :P2 10}}]
-      (is (= [{:to :P1 :action :hit :args {:player :P2}}
-              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 9}}]
+      (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
+              {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 9}}]
              (-> world
                  (t/fire :P1)
                  (:journal))))))
@@ -168,9 +175,11 @@
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                           :x1 {:y0 {:player :P} :y1 :empty :y2 :wall}
-                                           :x2 {:y0 :empty :y1 :empty :y2 :wall}
-                                           :manoeuvre :forward}}]
+                                           :x1 {:y0 {:player {:name :P
+                                                              :manoeuvre :forward}}
+                                                :y1 :empty
+                                                :y2 :wall}
+                                           :x2 {:y0 :empty :y1 :empty :y2 :wall}}}]
              (-> world
                  (t/move :P :forward)
                  (:journal))))))
@@ -183,12 +192,16 @@
       ;; The order of these journal items is implementation-dependent (we reduce over
       ;; the set of active players). TODO: we could sort them first.
       (is (= [{:to :P1 :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                            :x1 {:y0 {:player :P1} :y1 :empty :y2 :wall}
-                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}
-                                            :manoeuvre :forward}}
+                                            :x1 {:y0 {:player {:name :P1 :manoeuvre :forward}}
+                                                 :y1 :empty
+                                                 :y2 :wall}
+                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}}}
               ;; No manoeuvre for P2.
-              {:to :P2 :action :view :args {:x0 {:y0 :empty :y1 {:player :P1} :y2 :empty}
-                                            :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+              {:to :P2 :action :view :args {:x0 {:y0 :empty
+                                                 :y1 {:player {:name :P1
+                                                               :manoeuvre :forward}}
+                                                 :y2 :empty}
+                                            :x1 {:y0 {:player {:name :P2}} :y1 :empty :y2 :empty}
                                             :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (-> world
                  (t/move :P1 :forward)
@@ -208,9 +221,10 @@
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
-                                           :x1 {:y0 {:player :P} :y1 :wall :y2 :wall}
-                                           :x2 {:y0 :empty :y1 :wall :y2 :wall}
-                                           :manoeuvre :yaw-left}}]
+                                           :x1 {:y0 {:player {:name :P :manoeuvre :yaw-left}}
+                                                :y1 :wall
+                                                :y2 :wall}
+                                           :x2 {:y0 :empty :y1 :wall :y2 :wall}}}]
              (-> world
                  (t/move :P :yaw-left)
                  (:journal)))))))
@@ -229,8 +243,8 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 10 :P2 10}}
           world1 (t/fire world0 :P1)]
-      (is (= [{:to :P1 :action :hit :args {:player :P2}}
-              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 9}}]
+      (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
+              {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 9}}]
              (:journal world1)))
       (is (= 9 (:P2 (:scoring world1))))))
 
@@ -241,9 +255,9 @@
                     (pl/add-player :P3 (pl/gen-player [2 2 2])))
           world0 {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
           world1 (t/fire world0 :P1)]
-      (is (= [{:to :P1 :action :hit :args {:player :P2}}
-              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
-              {:to m/BROADCAST :action :dead :args {:player :P2}}]
+      (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
+              {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 0}}
+              {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}]
              (:journal world1)))
       (is (= 0 (-> world1 (:scoring) (:P2))))
       (is (:P1 (:arena world1)))
@@ -256,19 +270,25 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world0 {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
           world1 (t/fire world0 :P1)]
-      (is (= [{:to :P1 :action :hit :args {:player :P2}}
-              {:to :P2 :action :hit-by :args {:player :P1 :hit-points 0}}
-              {:to m/BROADCAST :action :dead :args {:player :P2}}
+      (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
+              {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 0}}
+              {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
               {:to m/BROADCAST :action :end-round}
               {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
               {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P1} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P1}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
               {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P2} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P2}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
               {:to :P3 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                   :x1 {:y0 {:player :P3} :y1 :empty :y2 :empty}
+                                                   :x1 {:y0 {:player {:name :P3}}
+                                                        :y1 :empty
+                                                        :y2 :empty}
                                                    :x2 {:y0 :empty :y1 :empty :y2 :empty}}}]
              (:journal world1)))
       ;; Players have been put back into play:

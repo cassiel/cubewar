@@ -125,17 +125,15 @@ state0
               :names->transmitters {}})
 
 
-(def WORLD-STATE (atom {:world world-n :journal []}))
+(def WORLD-STATE (atom world-n))
 
 (srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :attach [:P1 9998])
 
 (srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :handshake nil)
 
 (srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :fire nil)
-(srv/serve1 WORLD-STATE :fire [:P3])
-(srv/serve1 WORLD-STATE :pitch-up [:P1])
-(srv/serve1 WORLD-STATE :yaw-right [:P1])
 
+(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :detach nil)
 
 ;; --- Network testing.
 
@@ -146,6 +144,17 @@ state0
 (map (fn [[name f]] {:n name :pos (f [0 0 0])})
      (:arena (srv/examine g)))
 
+(srv/interact g :attach [:P1 9998])
+(srv/interact g :attach ["Harmony" 9998])
+
+
+(srv/interact g :handshake nil)
+
+(srv/interact g :fire nil)
+(srv/interact g :pitch-up nil)
+(srv/interact g :yaw-right nil)
+
+(srv/interact g :detach nil)
 (srv/close g)
 
 ;; --- Junk.
