@@ -144,7 +144,6 @@ state0
 (map (fn [[name f]] {:n name :pos (f [0 0 0])})
      (:arena (srv/examine g)))
 
-(srv/interact g :attach [:P1 9998])
 (srv/interact g :attach ["Harmony" 9998])
 
 
@@ -153,6 +152,7 @@ state0
 (srv/interact g :fire nil)
 (srv/interact g :pitch-up nil)
 (srv/interact g :yaw-right nil)
+(srv/interact g :forward nil)
 
 (srv/interact g :detach nil)
 (srv/close g)
@@ -201,6 +201,9 @@ state0
 
 (v/dict-format [[1 2 3] [4 5 {:player 6}] [7 8 9]])
 
+(v/dict-format-3D [[[1 2 3] [4 5 6] [7 8 9]]
+                   [[10 11 12] [13 14 15] [16 17 18]]
+                   [[19 20 21] [22 23 24] [25 26 27]]])
 
 (first
  (reduce (fn [[m i] x] [(assoc m (keyword (str "P" i)) x) (inc i)])

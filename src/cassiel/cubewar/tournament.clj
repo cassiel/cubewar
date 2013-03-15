@@ -207,10 +207,8 @@
         (let [arena' (n/navigate arena name f)
               me (get arena' name)
               view (v/look-plane arena' me)
-              world' (assoc world :arena arena')
-              ]
+              world' (assoc world :arena arena')]
           ;; Send appropriate new view to all players:
-          #_ (transmit-all-move-views world' name)
           (transmit-all-views
            world'
            :view
