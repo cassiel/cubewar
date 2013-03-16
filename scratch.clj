@@ -144,17 +144,22 @@ state0
 (map (fn [[name f]] {:n name :pos (f [0 0 0])})
      (:arena (srv/examine g)))
 
-(srv/interact g :attach ["Harmony" 9998])
+(srv/interact g 8001 :attach ["Harmony" 9998])
+(srv/interact g 8001 :handshake nil)
+(srv/interact g 8001 :fire nil)
+(srv/interact g 8001 :pitch-up nil)
+(srv/interact g 8001 :yaw-right nil)
+(srv/interact g 8001 :forward nil)
+(srv/interact g 8001 :detach nil)
 
+(srv/interact g 8002 :attach ["Symphony" 9997])
+(srv/interact g 8002 :handshake nil)
+(srv/interact g 8002 :fire nil)
+(srv/interact g 8002 :pitch-up nil)
+(srv/interact g 8002 :yaw-right nil)
+(srv/interact g 8002 :forward nil)
+(srv/interact g 8002 :detach nil)
 
-(srv/interact g :handshake nil)
-
-(srv/interact g :fire nil)
-(srv/interact g :pitch-up nil)
-(srv/interact g :yaw-right nil)
-(srv/interact g :forward nil)
-
-(srv/interact g :detach nil)
 (srv/close g)
 
 ;; --- Junk.

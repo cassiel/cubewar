@@ -43,10 +43,11 @@
 
 ;; --- Using package.
 
-(def db (db/file-db "/test_hsqldb"))
+(def db (db/file-db "test_hsqldb"))
 
 (db/clear db)
 
+(db/authenticate db "User" "Pass")
 (db/authenticate db "User" "Pass")
 
 (db/num-users db)
