@@ -24,3 +24,7 @@
 
 ;; Special symbol for broadcast messages.
 (def BROADCAST ::*)
+
+;; Temporary: reserved name for overview.
+
+(def OVERVIEW-NAME "overview")

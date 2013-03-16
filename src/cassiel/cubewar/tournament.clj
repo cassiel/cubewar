@@ -44,6 +44,14 @@
   (assoc world
     :arena (dissoc (:arena world) p)))
 
+(defn transmit-overview
+  "Attempt to transmit the 3D view to any reserved player that's attached.
+   (For now we use a reserved name: TODO authenticate more smartly.)"
+  [world]
+  (journalise world {:to m/OVERVIEW-NAME
+                     :action :overview
+                     :args (v/dict-format-3D (v/look-arena (:arena world)))}))
+
 (defn transmit-all-views
   "For each active player, send it its own (new) view.
 
@@ -54,24 +62,25 @@
   (letfn [(manoeuvre-cell
             ;; Add `:manoeuvre` to cell if it contains a player in our map.
             [c]
-            (if-let [p (:player c)]
-              (if-let [m (manoeuvre-map (:name p))]
-                {:player (assoc p :manoeuvre m)}
-                c)
-              c))]
+            (or
+             (when-let [p (:player c)]
+               (when-let [m (manoeuvre-map (:name p))]
+                 {:player (assoc p :manoeuvre m)}))
+             c))]
 
-    (reduce (fn [w name]
-              (let [a (:arena world)
-                    me (get a name)
-                    view (v/look-plane a me)
-                    view' (map (partial map manoeuvre-cell) view)]
-                (as-> (v/dict-format view') args
-                      (journalise w {:to name
-                                     :action action
-                                     :args args}))))
-            world
-            ;; We reduce over the keys so that we can sort them for unit-testing.
-            (sort (keys (:arena world))))))
+    (transmit-overview
+     (reduce (fn [w name]
+               (let [a (:arena world)
+                     me (get a name)
+                     view (v/look-plane a me)
+                     view' (map (partial map manoeuvre-cell) view)]
+                 (as-> (v/dict-format view') args
+                       (journalise w {:to name
+                                      :action action
+                                      :args args}))))
+             world
+             ;; We reduce over the keys so that we can sort them for unit-testing.
+             (sort (keys (:arena world)))))))
 
 (defn start-round
   "Start a new round: reset all scores, put all players into the arena.
@@ -107,7 +116,10 @@
 
 (defn attach
   "Attaches a player (game state only; not networking). A new player is put into
-   standby in the round scoring system, if not already present."
+   standby in the round scoring system, if not already present.
+
+   TODO: retransmit all views? (Check the new player is attached first? - Except
+   the watcher takes care of that?)"
   [world name]
   (let [scoring (:scoring world)]
     (check-for-new-round
@@ -117,7 +129,8 @@
       {:to name :action :welcome}))))
 
 (defn detach
-  "Remove a player completely from the game state. (No changes to networking.)"
+  "Remove a player completely from the game state. (No changes to networking done
+   here.) TODO: retransmit views to remaining players."
   [world name]
   (let [world' (assoc world
                  :arena (dissoc (:arena world) name)
