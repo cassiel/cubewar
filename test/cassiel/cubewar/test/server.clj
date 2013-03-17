@@ -2,8 +2,15 @@
   "(Non-network) server tests"
   (:use clojure.test)
   (:require (cassiel.cubewar [players :as pl]
+                             [db :as db]
                              [server :as srv]))
   (:import [net.loadbang.osc.comms IPTransmitter]))
+
+(def TEST-DB (db/mem-db "test"))
+
+(use-fixtures :each (fn [t]
+                      (db/initialize TEST-DB)
+                      (t)))
 
 (def state-n
   (-> {}
@@ -14,18 +21,21 @@
 (def world-n {:arena state-n
               :scoring {:P1 50 :P3 50}
               :names->transmitters {}
-              :origins->names {}})
+              :origins->names {}
+              :db TEST-DB})
 
 (deftest housekeeping
   (testing "attach: world state"
-    (let [FULL-STATE (atom world-n)
-          _ (srv/serve1 FULL-STATE
+    (let [WORLD (atom world-n)
+          _ (srv/serve1 WORLD
+                        nil
                         {:host "localhost" :port 9999}
-                        :attach [:P1 9998])]
-      (is (= :P1 (-> @FULL-STATE
+                        :attach
+                        [:P1 9998])]
+      (is (= :P1 (-> @WORLD
                      (:origins->names)
                      (get {:host "localhost" :port 9999}))))
-      (let [r (-> @FULL-STATE
+      (let [r (-> @WORLD
                   (:names->transmitters)
                   (:P1))]
         (is (isa? (class r) IPTransmitter))
@@ -33,9 +43,54 @@
         (is (= 9998 (.getPort r))))))
 
   (testing "attach: journal"
-    (let [FULL-STATE (atom world-n)]
+    (let [WORLD (atom world-n)]
       (is (= [{:to :P1 :action :welcome}
               {:to :P1 :action :attached :args {:host "localhost" :port 9998}}]
-             (srv/serve1 FULL-STATE
+             (srv/serve1 WORLD
+                         nil
                          {:host "localhost" :port 9999}
-                         :attach [:P1 9998]))))))
+                         :attach
+                         [:P1 9998]))))))
+
+(deftest authentication
+  (testing "bad command"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args]
+                    {:journal (.getMessage exn)})
+          do-it (srv/serve1 WORLD
+                            handler
+                            {:host "localhost" :port 9999}
+                            :SOME-BAD-COMMAND
+                            [9998])]
+      (is (= "throw+: {:type :cassiel.cubewar.tournament/BAD-ACTION, :action :SOME-BAD-COMMAND}"
+             do-it))))
+
+  (testing "login as demo"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args] {:journal "FAILED"})
+          _ (srv/serve1 WORLD
+                        handler
+                        {:host "localhost" :port 9999}
+                        :login
+                        ["Demo1" "Pass1" 9998])]
+      (is (= "Demo1" (-> @WORLD
+                         (:origins->names)
+                         (get {:host "localhost" :port 9999}))))
+      (let [r (-> @WORLD
+                  (:names->transmitters)
+                  (get "Demo1"))]
+        (is (isa? (class r) IPTransmitter))
+        (is (= "localhost" (-> r (.getAddress) (.getHostName))))
+        (is (= 9998 (.getPort r))))))
+
+  (testing "login failed"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args]
+                    {:journal (.getMessage exn)})
+          do-it (srv/serve1 WORLD
+                            handler
+                            {:host "localhost" :port 9999}
+                            :login
+                            ["WrongUser" "WrongPass" 9998])]
+      (is (= "throw+: {:type :cassiel.cubewar.db/AUTH-FAILED}"
+             do-it)))))

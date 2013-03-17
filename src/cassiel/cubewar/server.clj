@@ -4,9 +4,10 @@
                              [cube :as c]
                              [players :as pl]
                              [tournament :as t]
+                             [db :as db]
                              [network :as net])
             (cassiel.zeroconf [server :as zs]))
-  (:use [slingshot.slingshot :only [throw+]]))
+  (:use [slingshot.slingshot :only [try+ throw+]]))
 
 (defprotocol GAME
   "State of a game."
@@ -51,6 +52,25 @@
         :action :attached
         :args {:host (:host origin) :port back-port}}))
 
+    :login
+    ;; TODO: check for prior attachment.
+    (let [db (:db world)
+          [player-name password back-port] args
+          id (db/authenticate db player-name password)
+          origins->names (assoc (:origins->names world)
+                           origin
+                           player-name)
+          names->transmitters (assoc (:names->transmitters world)
+                                player-name
+                                (net/start-transmitter (:host origin) back-port))]
+      (t/journalise
+       (assoc (t/attach world player-name)
+         :origins->names origins->names
+         :names->transmitters names->transmitters)
+       {:to player-name
+        :action :logged-in
+        :args {:host (:host origin) :port back-port}}))
+
     :detach
     ;; TODO: check for prior attachment.
     (let [tx (retrieve-transmitter world player)]
@@ -70,25 +90,48 @@
     ;; Anything else: look it up as a manoeuvre function.
     (t/move world player action)))
 
+;; We painted ourself into a corner slightly, in that all comms go through the
+;; journalling mechanism which only works for attached players, so there's no
+;; way to reply when not authenticated. So, `serve1` is able to catch exceptions
+;; and report them back to the origin point.
+
 (defn serve1
   "The journal is effectively transient, but we need some way to return it atomically
    so that it can be transmitted. (TODO we need a way to do that safely.)"
-  [world origin action args]
+  [world handler origin action args]
 
   (:journal
    (swap! world
           (fn [w]
-            (let [w' (dissoc w :journal)]
+            (let [w' (dissoc w :journal)
+                  player-opt (retrieve-player w' origin)]
               ;; TODO (here and watcher): use Slingshot catch.
               (try
-                (service w' origin (retrieve-player w' origin) action args)
-                (catch Exception exn
-                  (do
-                    (println "SERVICE exception: " exn)
-                    (.printStackTrace exn)
-                    w'))))))))
+                (service w' origin player-opt action args)
+                (catch
+                    Exception
+                    exn
+                  (handler w' exn origin player-opt args))))))))
 
 ;; Actual server.
+
+(defn handler
+  "Handler has been lifted out to help with unit tests."
+  [world exn origin player-opt args]
+  (let [{:keys [host port]} origin
+        tx-opt (when player-opt (retrieve-transmitter world player-opt))
+        ;; This is a horrible hack: when we aren't attached, we don't
+        ;; have any information about the back-port, so let's blindly
+        ;; use the last argument (works for `:attach`).
+        tx (or tx-opt
+               (net/start-transmitter host (last args)))]
+    (println "SERVICE exception: " exn)
+    (.printStackTrace exn)
+    (println "Transmitting back to: " origin)
+    (.transmit tx (net/make-message
+                   :error
+                   {:message (.getMessage exn)}))
+    world))
 
 (defn start-game
   [name port]
@@ -120,7 +163,7 @@
 
       (add-watch WORLD :key watcher))
 
-    (let [r (net/start-receiver port (partial serve1 WORLD))
+    (let [r (net/start-receiver port (partial serve1 WORLD handler))
           zeroconf (zs/server :type "_cubewar._udp.local."
                               :name name
                               :port port
@@ -134,6 +177,7 @@
       (reify GAME
         (examine [this] @WORLD)
         (interact [this port action args] (serve1 WORLD
+                                                  handler
                                                   {:host "localhost" :port port}
                                                   action
                                                   args))

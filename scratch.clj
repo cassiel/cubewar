@@ -283,3 +283,5 @@ state0
 16rA0
 
 java.io.File/separator
+
+(last [1 2 3])

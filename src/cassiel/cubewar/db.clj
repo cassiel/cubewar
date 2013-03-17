@@ -8,6 +8,7 @@
 (defprotocol LEAGUE
   "Interface to DB representing a league."
   (clear [this] "Drop all tables and recreate.")
+  (initialize [this] "Create the initial test/usage state.")
   (add-user [this user pass rgb] "Add a user with this password and display colour.")
   (lookup-id [this user] "Look up an ID from a username. (Probably not needed.)")
   (lookup-user [this id] "Look up user details as a map.")
@@ -62,6 +63,12 @@
          [:Username "VARCHAR(255)" "NOT NULL"]
          [:Password "VARCHAR(255)" "NOT NULL"]
          [:RGB "INTEGER" "NOT NULL"])))
+
+    (initialize [this]
+      (clear this)
+      (add-user this "Demo1" "Pass1" 0xFFFFFF)
+      (add-user this "Demo2" "Pass2" 0xFFFFFF)
+      (add-user this "Demo3" "Pass3" 0xFFFFFF))
 
     (add-user [this user pass rgb]
       (if (lookup-id this user)
