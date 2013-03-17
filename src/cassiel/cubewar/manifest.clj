@@ -28,3 +28,7 @@
 ;; Temporary: reserved name for overview.
 
 (def OVERVIEW-NAME "overview")
+
+(def DEFAULT-DB-NAME "cubewar")
+
+(def INITIALISE-DB-ON-START true)

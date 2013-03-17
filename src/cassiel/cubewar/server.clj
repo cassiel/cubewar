@@ -56,7 +56,28 @@
     ;; TODO: check for prior attachment.
     (let [db (:db world)
           [player-name password back-port] args
-          id (db/authenticate db player-name password)
+          id (db/authenticate db player-name password)]
+      (if ((:scoring world) player-name)
+          (throw+ {:type ::ALREADY-LOGGED-IN})
+          (let [origins->names (assoc (:origins->names world)
+                                 origin
+                                 player-name)
+                names->transmitters (assoc (:names->transmitters world)
+                                      player-name
+                                      (net/start-transmitter (:host origin) back-port))]
+            (t/journalise
+             (assoc (t/attach world player-name)
+               :origins->names origins->names
+               :names->transmitters names->transmitters)
+             {:to player-name
+              :action :logged-in
+              :args {:host (:host origin) :port back-port}}))))
+
+    :login-new
+    ;; TODO: check for prior attachment.
+    (let [db (:db world)
+          [player-name password rgb back-port] args
+          id (db/add-user db player-name password rgb)
           origins->names (assoc (:origins->names world)
                            origin
                            player-name)
@@ -140,7 +161,11 @@
   (let [WORLD (atom {:arena {}
                      :scoring {}
                      :origins->names {}
-                     :names->transmitters {}})]
+                     :names->transmitters {}
+                     ;; TEMPORARY: initialise each time.
+                     :db (let [db (db/file-db m/DEFAULT-DB-NAME)]
+                           (when m/INITIALISE-DB-ON-START (db/initialize db))
+                           db)})]
 
     ;; The watcher runs through the journal, picking out the destination transmitter via `:to`
     ;; (or all of them for a broadcast), making a `Message` out of the rest of each entry,

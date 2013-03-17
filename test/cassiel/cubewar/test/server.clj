@@ -83,6 +83,33 @@
         (is (= "localhost" (-> r (.getAddress) (.getHostName))))
         (is (= 9998 (.getPort r))))))
 
+  (testing "already logged in"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args] {:journal (.getMessage exn)})
+          try-login #(srv/serve1 WORLD
+                                 handler
+                                 {:host "localhost" :port 9999}
+                                 :login
+                                 ["Demo1" "Pass1" 9998])
+          _ (try-login)]
+      (is (= "throw+: {:type :cassiel.cubewar.server/ALREADY-LOGGED-IN}" (try-login)))))
+
+  (testing "repeated login OK"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args] {:journal "FAILED"})
+          try-login #(srv/serve1 WORLD
+                                 handler
+                                 {:host "localhost" :port 9999}
+                                 :login
+                                 ["Demo1" "Pass1" 9998])
+          try-logout #(srv/serve1 WORLD
+                                  handler
+                                  {:host "localhost" :port 9999}
+                                  :detach
+                                  [])
+          _ (dorun [(try-login) (try-logout) (try-login)])]
+      (is ((:scoring @WORLD) "Demo1"))))
+
   (testing "login failed"
     (let [WORLD (atom world-n)
           handler (fn [world exn origin player-opt args]
@@ -93,4 +120,34 @@
                             :login
                             ["WrongUser" "WrongPass" 9998])]
       (is (= "throw+: {:type :cassiel.cubewar.db/AUTH-FAILED}"
+             do-it))))
+
+  (testing "new user"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args] {:journal (.getMessage exn)})
+          _ (srv/serve1 WORLD
+                        handler
+                        {:host "localhost" :port 9999}
+                        :login-new
+                        ["NewUser" "NewPass" 0xFFFFFF 9998])]
+      (is (= "NewUser" (-> @WORLD
+                         (:origins->names)
+                         (get {:host "localhost" :port 9999}))))
+      (let [r (-> @WORLD
+                  (:names->transmitters)
+                  (get "NewUser"))]
+        (is (isa? (class r) IPTransmitter))
+        (is (= "localhost" (-> r (.getAddress) (.getHostName))))
+        (is (= 9998 (.getPort r))))))
+
+  (testing "user exists"
+    (let [WORLD (atom world-n)
+          handler (fn [world exn origin player-opt args]
+                    {:journal (.getMessage exn)})
+          do-it (srv/serve1 WORLD
+                            handler
+                            {:host "localhost" :port 9999}
+                            :login-new
+                            ["Demo1" "OtherPass" 0xFFFFFF 9998])]
+      (is (= "throw+: {:type :cassiel.cubewar.db/DUPLICATE-USER}"
              do-it)))))

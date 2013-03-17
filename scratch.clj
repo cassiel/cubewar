@@ -285,3 +285,6 @@ state0
 java.io.File/separator
 
 (last [1 2 3])
+
+
+({"A" 1 :B 2} "A")
