@@ -1,9 +1,11 @@
 (ns cassiel.cubewar.test.server
   "(Non-network) server tests"
-  (:use clojure.test)
+  (:use clojure.test
+        midje.sweet)
   (:require (cassiel.cubewar [players :as pl]
                              [db :as db]
-                             [server :as srv]))
+                             [server :as srv]
+                             [tools :as t]))
   (:import [net.loadbang.osc.comms IPTransmitter]))
 
 (def TEST-DB (db/mem-db "test"))
@@ -151,3 +153,18 @@
                             ["Demo1" "OtherPass" 0xFFFFFF 9998])]
       (is (= "throw+: {:type :cassiel.cubewar.db/DUPLICATE-USER}"
              do-it)))))
+
+(with-state-changes [(before :facts (db/initialize TEST-DB))]
+  (fact "prevent multiple logins on the same back route"
+   (let [WORLD (atom world-n)
+         _ (srv/serve1 WORLD
+                       (fn [world & _] world)
+                       {:host "localhost" :port 9999}
+                       :login
+                       ["Demo1" "Pass1" 0xFFFFFF 9998])]
+     (srv/serve1 WORLD
+                 (fn [world exn & _] {:journal (.getMessage exn)})
+                 {:host "localhost" :port 9898}
+                 :login
+                 ["Demo2" "Pass2" 0xFFFFFF 9998])
+     => "throw+: {:type :cassiel.cubewar.server/MACHINE-IN-USE}")))

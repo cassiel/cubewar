@@ -10,7 +10,9 @@
                  [commons-codec/commons-codec "1.7"]
                  [eu.cassiel/clojure-zeroconf "1.1.0"]]
   :plugins [[lein-ring "0.8.2"]
+            [lein-midje "3.0.0"]
             [lein-marginalia "0.7.1"]]
   :ring {:handler cassiel.cubewar.handler/app}
   :profiles
-  {:dev {:dependencies [[ring-mock "0.1.3"]]}})
+  {:dev {:dependencies [[midje "1.5.0"]
+                        [ring-mock "0.1.3"]]}})

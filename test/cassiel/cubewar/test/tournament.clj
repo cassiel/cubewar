@@ -1,32 +1,34 @@
 (ns cassiel.cubewar.test.tournament
   "Test tournament machinery."
   (:use clojure.test
+        midje.sweet
         slingshot.test)
   (:require (cassiel.cubewar [manifest :as m]
                              [players :as pl]
                              [state-navigation :as n]
                              [view :as v]
-                             [tournament :as t])))
+                             [tournament :as tm]
+                             [tools :as t])))
 
 (deftest basics
   (testing "journalise"
     (is (= {:journal [{:foo 99}]}
-           (t/journalise {} {:foo 99})))
+           (tm/journalise {} {:foo 99})))
     (is (= {:journal [{:to m/BROADCAST :action :alert :args {:message "BOO!"}}]}
-           (t/journalise {} (t/broadcast-alert "BOO!"))))
+           (tm/journalise {} (tm/broadcast-alert "BOO!"))))
     (is (= {:journal [1 2 3]}
-           (t/journalise {} 1 2 3))))
+           (tm/journalise {} 1 2 3))))
 
   (testing "occupied"
-    (is (t/occupied {:P (pl/gen-player [0 0 0])} [0 0 0]))
-    (is (not (t/occupied {} [0 0 0])))
-    (is (not (t/occupied {:P (pl/gen-player [0 0 1])} [0 0 0])))
-    (is (not (t/occupied {:P (pl/gen-player [0 0 0])} [1 0 0]))))
+    (is (tm/occupied {:P (pl/gen-player [0 0 0])} [0 0 0]))
+    (is (not (tm/occupied {} [0 0 0])))
+    (is (not (tm/occupied {:P (pl/gen-player [0 0 1])} [0 0 0])))
+    (is (not (tm/occupied {:P (pl/gen-player [0 0 0])} [1 0 0]))))
 
   (testing "find-space"
-    (is (t/find-space {}))
+    (is (tm/find-space {}))
     (let [arena {:P1 identity}
-          pos (t/find-space arena)]
+          pos (tm/find-space arena)]
       (is pos)
       (is (not= ((:P1 arena) [0 0 0])
                 pos)))))
@@ -42,16 +44,16 @@
   (testing "cannot move if not in arena"
     (let [world {:arena {} :scoring {:P 0}}]
       (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
-             (-> world (t/move :P :forward) (:journal))))))
+             (-> world (tm/move :P :forward) (:journal))))))
 
   (testing "cannot fire if not in arena"
     (let [world {:arena {} :scoring {:P 0}}]
       (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
-             (-> world (t/fire :P) (:journal))))))
+             (-> world (tm/fire :P) (:journal))))))
 
   (testing "attach doesn't put player in arena"
     (let [world (-> {:arena {} :scoring {}}
-                    (t/attach :P))]
+                    (tm/attach :P))]
       (is (:P (:scoring world)))
       (is (nil? (:P (:arena world))))))
 
@@ -59,37 +61,37 @@
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world (-> {:arena arena :scoring {:P 7}}
-                    (t/attach :P))]
+                    (tm/attach :P))]
       (is (:P (:arena world)))
       (is (= 7 (:P (:scoring world))))))
 
   (testing "player in arena not moved on round start"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [2 2 2])))
-          world (t/start-round {:arena arena :scoring {:P2 0}})]
+          world (tm/start-round {:arena arena :scoring {:P2 0}})]
       (is (-> world (:arena) (:P2)))
       (is (= [2 2 2]
              ((-> world (:arena) (:P1)) [0 0 0])))))
 
   (testing "round start puts two players into arena"
     (let [world (-> {:arena {} :scoring {:P1 0 :P2 0}}
-                    (t/start-round))]
+                    (tm/start-round))]
       (is (:P1 (:arena world)))
       (is (:P2 (:arena world)))))
 
   (testing "round start fails if unsufficient players"
     (let [world {:arena {:P1 (pl/gen-player [0 0 0])} :scoring {}}]
-      (is (thrown+? [:type ::t/NOT-ENOUGH-PLAYERS]
-                    (t/start-round world)))))
+      (is (thrown+? [:type ::tm/NOT-ENOUGH-PLAYERS]
+                    (tm/start-round world)))))
 
   ;; We shouldn't start a round unless the arena is empty.
   #_ (testing "can start round with one active player"
        (let [world {:arena {:P1 (pl/gen-player [0 0 0])}
                     :scoring {:P1 0 :P2 0}}]
-         (is (= 2 (count (-> world (t/start-round) (:arena)))))))
+         (is (= 2 (count (-> world (tm/start-round) (:arena)))))))
 
   (testing "can start round manually, with journal generated"
-    (let [world (t/start-round {:arena {}
+    (let [world (tm/start-round {:arena {}
                                 :scoring {:P1 0 :P2 0}})]
       (is (= 2 (count (:arena world))))
       (is (= [{:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
@@ -108,13 +110,13 @@
   (testing "attach doesn't start a game when not enough players"
     (let [world {:arena {}
                  :scoring {}}
-          world' (t/attach world :P2)]
+          world' (tm/attach world :P2)]
       (is (empty? (:arena world')))))
 
   (testing "attach starts a round when enough players"
     (let [world {:arena {}
                  :scoring {:P1 0}}
-          world' (t/attach world :P2)]
+          world' (tm/attach world :P2)]
       (is (= [{:to :P2 :action :welcome}
               {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                                    :x1 {:y0 {:player {:name :P1}}
@@ -133,7 +135,7 @@
   (testing "detach removes from arena and standby."
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
-          world (t/detach {:arena arena :scoring {:P 10}} :P)]
+          world (tm/detach {:arena arena :scoring {:P 10}} :P)]
       (is (nil? (:P (:arena world))))
       (is (nil? (:P (:scoring world))))))
 
@@ -141,7 +143,7 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 0 1])))
-          world (t/detach {:arena arena :scoring {:P1 10 :P2 10}} :P1)]
+          world (tm/detach {:arena arena :scoring {:P1 10 :P2 10}} :P1)]
       (is (nil? (:P2 (:arena world))))
       (is (= [{:to m/BROADCAST :action :end-round}
               {:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}}]
@@ -154,7 +156,7 @@
           world {:arena arena :scoring {:P 10}}]
       (is (= [{:to :P :action :miss}]
              (-> world
-                 (t/fire :P)
+                 (tm/fire :P)
                  (:journal))))))
 
   (testing "hit"
@@ -165,7 +167,7 @@
       (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
               {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 9}}]
              (-> world
-                 (t/fire :P1)
+                 (tm/fire :P1)
                  (:journal)))))))
 
 (deftest sanity-check
@@ -175,8 +177,8 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10}}]
 
-      (is (thrown+? [:type ::t/NOT-IN-SYSTEM]
-                    (-> world (t/fire :P1)))))))
+      (is (thrown+? [:type ::tm/NOT-IN-SYSTEM]
+                    (-> world (tm/fire :P1)))))))
 
 (deftest move-journal
   (testing "forward OK, one player"
@@ -184,7 +186,7 @@
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}
           world' (-> world
-                     (t/move :P :forward))]
+                     (tm/move :P :forward))]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                            :x1 {:y0 {:player {:name :P
                                                               :manoeuvre :forward}}
@@ -200,7 +202,7 @@
                     (pl/add-player :P2 (pl/gen-player [1 0 0])))
           world {:arena arena :scoring nil}
           world' (-> world
-                     (t/move :P1 :forward))]
+                     (tm/move :P1 :forward))]
       ;; The order of these journal items is implementation-dependent (we reduce over
       ;; the set of active players). TODO: we could sort them first.
       (is (= [{:to :P1 :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
@@ -223,7 +225,7 @@
           world {:arena arena :scoring nil}]
       (is (= [{:to :P :action :blocked}]
              (-> world
-                 (t/move :P :forward)
+                 (tm/move :P :forward)
                  (:journal))))))
 
   (testing "yaw left"
@@ -231,7 +233,7 @@
                     (pl/add-player :P (pl/gen-player [0 0 0])))
           world {:arena arena :scoring nil}
           world' (-> world
-                     (t/move :P :yaw-left))]
+                     (tm/move :P :yaw-left))]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
                                            :x1 {:y0 {:player {:name :P :manoeuvre :yaw-left}}
                                                 :y1 :wall
@@ -244,7 +246,7 @@
   (testing "in scoring but not in round"
     ;; We can't really get an empty cube, but:
     (let [world {:arena {} :scoring {:P 10}}
-          {j :journal} (t/fire world :P)]
+          {j :journal} (tm/fire world :P)]
       (is (= [{:to :P :action :error :args {:message "not currently in play"}}]
              j))))
 
@@ -253,7 +255,7 @@
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 10 :P2 10}}
-          world' (t/fire world :P1)]
+          world' (tm/fire world :P1)]
       (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
               {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 9}}]
              (:journal world')))
@@ -265,7 +267,7 @@
                     (pl/add-player :P2 (pl/gen-player [0 1 0]))
                     (pl/add-player :P3 (pl/gen-player [2 2 2])))
           world {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
-          world' (t/fire world :P1)]
+          world' (tm/fire world :P1)]
       (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
               {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 0}}
               {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}]
@@ -280,7 +282,7 @@
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
           world {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
-          world' (t/fire world :P1)]
+          world' (tm/fire world :P1)]
       (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
               {:to :P2 :action :hit-by :args {:player {:name :P1} :hit-points 0}}
               {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}

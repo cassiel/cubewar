@@ -127,19 +127,24 @@ state0
 
 (def WORLD-STATE (atom world-n))
 
-(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :attach [:P1 9998])
+@WORLD-STATE
 
-(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :handshake nil)
 
-(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :fire nil)
+(srv/serve1 WORLD-STATE nil {:host "localhost" :port 9999} :attach [:P1 9998])
 
-(srv/serve1 WORLD-STATE {:host "localhost" :port 9999} :detach nil)
+(srv/serve1 WORLD-STATE nil {:host "localhost" :port 9999} :handshake nil)
+
+(srv/serve1 WORLD-STATE nil {:host "localhost" :port 9999} :fire nil)
+
+(srv/serve1 WORLD-STATE nil {:host "localhost" :port 9999} :detach nil)
 
 ;; --- Network testing.
 
 (def g (srv/start-game "Cubewar-Lein" 8123))
 
 (srv/examine g)
+
+(srv/clear g)
 
 (map (fn [[name f]] {:n name :pos (f [0 0 0])})
      (:arena (srv/examine g)))

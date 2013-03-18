@@ -1,10 +1,12 @@
 (ns cassiel.cubewar.test.state-navigation
   "Test basic player navigation in the state."
   (:use clojure.test
+        midje.sweet
         slingshot.test)
   (:require (cassiel.cubewar [cube :as c]
                              [players :as pl]
-                             [state-navigation :as nav])))
+                             [state-navigation :as nav]
+                             [tools :as t])))
 
 (deftest ok-moves
   (testing "OK after forward"
@@ -18,6 +20,16 @@
           state1 (nav/navigate state0 :PLAYER c/pitch-up)]
       (is (= [0 0 0]
              ((:PLAYER state1) [0 0 0]))))))
+
+(fact "testing that we can catch slingshot exceptions"
+      (let [state (-> {}
+                      (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                      (pl/add-player :P2 (pl/gen-player [0 1 0])))]
+        (nav/navigate state :P1 c/forward)
+        => (throws clojure.lang.ExceptionInfo
+                   #"^throw+"
+                   (partial t/check-against ::nav/NOT-EMPTY
+                            #(-> % (:contents) (:player))))))
 
 (deftest bad-moves
   (testing "collision check with wall"

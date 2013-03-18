@@ -14,6 +14,7 @@
 
   (examine [this] "Look at the world state.")
   (interact [this port action args] "Interact with the server as a pretend client")
+  (clear [this] "Reset the state to empty.")
   (close [this] "Close the game server."))
 
 (defn retrieve-player
@@ -26,6 +27,30 @@
    (get (:names->transmitters world) player)
    (throw+ {:type ::NO-TRANSMITTER :player (or player "<null>")})))
 
+(defn- attach
+  "Attach a player, setting up the name and network maps. Produce a journal
+   with the specified action keyword."
+  [world origin player-name back-port action]
+  (let [host (:host origin)
+        origins->names (assoc (:origins->names world)
+                         origin
+                         player-name)
+        txs (:names->transmitters world)]
+    (if (some #(and (= host (-> % (.getAddress) (.getHostName)))
+                    (= back-port (.getPort %)))
+              (vals txs))
+      (throw+ {:type ::MACHINE-IN-USE})
+      (let [names->transmitters (assoc (:names->transmitters world)
+                                  player-name
+                                  (net/start-transmitter host back-port))]
+        (t/journalise
+         (assoc (t/attach world player-name)
+           :origins->names origins->names
+           :names->transmitters names->transmitters)
+         {:to player-name
+          :action action
+          :args {:host (:host origin) :port back-port}})))))
+
 ;; `service` takes the world, the dispatch argument, and a list
 ;; of arguments that came in with the OSC message. The result is a new world.
 
@@ -36,64 +61,27 @@
   [world origin player action args]
   (case action
     :attach
-    ;; TODO: check for prior attachment.
-    (let [[player-name back-port] args
-          origins->names (assoc (:origins->names world)
-                           origin
-                           player-name)
-          names->transmitters (assoc (:names->transmitters world)
-                                player-name
-                                (net/start-transmitter (:host origin) back-port))]
-      (t/journalise
-       (assoc (t/attach world player-name)
-         :origins->names origins->names
-         :names->transmitters names->transmitters)
-       {:to player-name
-        :action :attached
-        :args {:host (:host origin) :port back-port}}))
+    (let [[player-name back-port] args]
+      (attach world origin player-name back-port :attached))
 
     :login
     ;; TODO: check for prior attachment.
     (let [db (:db world)
           [player-name password back-port] args
-          id (db/authenticate db player-name password)]
+          _ (db/authenticate db player-name password)]
       (if ((:scoring world) player-name)
-          (throw+ {:type ::ALREADY-LOGGED-IN})
-          (let [origins->names (assoc (:origins->names world)
-                                 origin
-                                 player-name)
-                names->transmitters (assoc (:names->transmitters world)
-                                      player-name
-                                      (net/start-transmitter (:host origin) back-port))]
-            (t/journalise
-             (assoc (t/attach world player-name)
-               :origins->names origins->names
-               :names->transmitters names->transmitters)
-             {:to player-name
-              :action :logged-in
-              :args {:host (:host origin) :port back-port}}))))
+        (throw+ {:type ::ALREADY-LOGGED-IN})
+        (attach world origin player-name back-port :logged-in)))
 
     :login-new
     ;; TODO: check for prior attachment.
     (let [db (:db world)
           [player-name password rgb back-port] args
-          id (db/add-user db player-name password rgb)
-          origins->names (assoc (:origins->names world)
-                           origin
-                           player-name)
-          names->transmitters (assoc (:names->transmitters world)
-                                player-name
-                                (net/start-transmitter (:host origin) back-port))]
-      (t/journalise
-       (assoc (t/attach world player-name)
-         :origins->names origins->names
-         :names->transmitters names->transmitters)
-       {:to player-name
-        :action :logged-in
-        :args {:host (:host origin) :port back-port}}))
+          _ (db/add-user db player-name password rgb)]
+      (attach world origin player-name back-port :logged-in))
 
     :detach
-    ;; TODO: check for prior attachment.
+    ;; TODO: check for prior detachment...?
     (let [tx (retrieve-transmitter world player)]
       (.close tx)
       (assoc (t/detach world player)
@@ -154,18 +142,23 @@
                    {:message (.getMessage exn)}))
     world))
 
+(defn- start-state
+  "The starting state for the server, setting up DB if/as required."
+  []
+  {:arena {}
+   :scoring {}
+   :origins->names {}
+   :names->transmitters {}
+   ;; TEMPORARY: initialise each time.
+   :db (let [db (db/file-db m/DEFAULT-DB-NAME)]
+         (when m/INITIALISE-DB-ON-START (db/initialize db))
+         db)})
+
 (defn start-game
   [name port]
 
   ;; Test with strings for players - these are directly in the OSC at the moment.
-  (let [WORLD (atom {:arena {}
-                     :scoring {}
-                     :origins->names {}
-                     :names->transmitters {}
-                     ;; TEMPORARY: initialise each time.
-                     :db (let [db (db/file-db m/DEFAULT-DB-NAME)]
-                           (when m/INITIALISE-DB-ON-START (db/initialize db))
-                           db)})]
+  (let [WORLD (atom (start-state))]
 
     ;; The watcher runs through the journal, picking out the destination transmitter via `:to`
     ;; (or all of them for a broadcast), making a `Message` out of the rest of each entry,
@@ -206,6 +199,9 @@
                                                   {:host "localhost" :port port}
                                                   action
                                                   args))
+        (clear [this]
+          (reset! WORLD (start-state)))
+
         (close [this]
           (zs/close zeroconf)
           (.close r))))))

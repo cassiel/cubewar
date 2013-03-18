@@ -13,7 +13,11 @@
   (lookup-id [this user] "Look up an ID from a username. (Probably not needed.)")
   (lookup-user [this id] "Look up user details as a map.")
   (authenticate [this user pass] "Authenticate (returning an ID), or return null.")
-  (num-users [this] "Return number of users."))
+  (num-users [this] "Return number of users.")
+  (round-over [this players] "Round finished; bump :Played for these players.")
+  (winner [this name] "Bump the win count for this player.")
+  (score [this name] "Get the score as `{:played X :won Y}`.")
+  (league [this] "Get the entire league table."))
 
 (defn- crypt
   "SHA1 encryption. Not very smart (no salting), but this is only a game; this is
@@ -62,7 +66,9 @@
          ID
          [:Username "VARCHAR(255)" "NOT NULL"]
          [:Password "VARCHAR(255)" "NOT NULL"]
-         [:RGB "INTEGER" "NOT NULL"])))
+         [:RGB "INTEGER" "NOT NULL"]
+         [:Played "INTEGER" "NOT NULL"]
+         [:Won "INTEGER" "NOT NULL"])))
 
     (initialize [this]
       (clear this)
@@ -76,7 +82,9 @@
         (sql/with-connection db
           (:id (sql/insert-record :Users {:Username user
                                           :Password (crypt pass)
-                                          :RGB rgb})))))
+                                          :RGB rgb
+                                          :Played 0
+                                          :Won 0})))))
 
     ;; TODO do we need this? (Only in `add-user` perhaps.)
     (lookup-id [this name]
@@ -108,8 +116,31 @@
       (sql/with-connection db
         (sql/with-query-results rows
           ["SELECT Count(*) AS C FROM Users"]
-          (:c (first rows))))
-      )))
+          (:c (first rows)))))
+
+    (round-over [this players]
+      (sql/with-connection db
+        (doseq [p players]
+          nil
+          #_ (sql/execute! db
+                        ["UPDATE Users SET Played = Played + 1 WHERE Username = ?" p]))))
+
+    (winner [this name]
+      (sql/with-connection db
+        nil
+        #_ (sql/execute! db
+                      ["UPDATE Users SET Won = Won + 1 WHERE Username = ?" name])))
+
+    (score [this name]
+      (sql/with-connection db
+        (sql/with-query-results rows
+          ["SELECT Played, Won FROM Users WHERE Username = ?" name]
+          (if (seq rows)
+            {:played (:played (first rows)) :won (:won (first rows))}
+            (throw+ {:type ::NO-SUCH-USER :name name})))))
+
+    (league [this]
+      nil)))
 
 (defn mem-db
   "Create a database in memory (for testing)."
