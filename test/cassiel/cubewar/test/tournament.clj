@@ -366,6 +366,7 @@
             [{:to :P1 :action :hit :args {:player {:name :P2}}}
              {:to :P2 :action :hit-by :args {:player {:name :P1}
                                              :hit-points 0}}
+             {:to :P2 :action :you-dead}
              {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
              {:action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
                                    :x1 {:y0 {:player (mock-player :P1)} :y1 :empty :y2 :empty}
@@ -448,6 +449,7 @@
             => [{:to :P1 :action :hit :args {:player {:name :P2}}}
                 {:to :P2 :action :hit-by :args {:player {:name :P1}
                                                 :hit-points 0}}
+                {:to :P2 :action :you-dead}
                 {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
                 (overview-entry (assoc world' :arena {}))
                 {:to m/BROADCAST :action :end-round}

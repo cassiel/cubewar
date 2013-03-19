@@ -191,11 +191,15 @@
                     (let [to (:to x)
                           txs (if (= to m/BROADCAST)
                                 (vals (:names->transmitters new))
-                                [(retrieve-transmitter new to)])
+                                (try+
+                                 [(retrieve-transmitter new to)]
+                                 ;; Another catch for `Observer`.
+                                 (catch [:type ::NO-TRANSMITTER] _ [])))
                           msg (net/make-message (:action x) (:args x))]
                       (doseq [tx txs]
-                        ;; The `when` check is for `Observer` which we
-                        ;; send to regardless of whether it's attached.
+                        ;; The `when` check is 0 again - for `Observer` which we
+                        ;; send to regardless of whether it's attached. (I don't
+                        ;; think we need this one.)
                         (when tx (.transmit tx msg))))))
                 (catch Exception exn
                   (println "WATCHER exception: " exn)

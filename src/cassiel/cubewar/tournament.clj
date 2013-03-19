@@ -220,11 +220,16 @@
                                       :action :hit-by
                                       :args {:player {:name name} :hit-points new-score}})
 
-                         ;; If player killed, broadcast it:
+                         ;; Tell player he's dead?
+
+                         ;; If player killed, inform, and broadcast it:
                          (if-not (pos? new-score)
-                           (journalise w {:to m/BROADCAST
-                                          :action :dead
-                                          :args {:player victim}})
+                           (journalise w
+                                       {:to vname
+                                        :action :you-dead}
+                                       {:to m/BROADCAST
+                                        :action :dead
+                                        :args {:player victim}})
                            w)
 
                          ;; Set new score:
