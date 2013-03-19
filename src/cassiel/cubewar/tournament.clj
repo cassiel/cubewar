@@ -6,7 +6,8 @@
                              [cube :as c]
                              [players :as pl]
                              [view :as v]
-                             [state-navigation :as n]))
+                             [state-navigation :as n]
+                             [db :as db]))
   (:use [slingshot.slingshot :only [try+ throw+]]))
 
 (defn journalise
@@ -44,13 +45,26 @@
   (assoc world
     :arena (dissoc (:arena world) p)))
 
+(defn- add-rgb
+  [lookup-fn c]
+  (or
+   (when-let [p (:player c)]
+     (assoc c :player (assoc p :rgb (lookup-fn (:name p)))))
+   c))
+
+(defn add-overview-rgbs
+  [lookup-fn view]
+  (map (partial map (partial map (partial add-rgb lookup-fn))) view))
+
 (defn transmit-overview
   "Attempt to transmit the 3D view to any reserved player that's attached.
    (For now we use a reserved name: TODO authenticate more smartly.)"
   [world]
-  (journalise world {:to m/OVERVIEW-NAME
-                     :action :overview
-                     :args (v/dict-format-3D (v/look-arena (:arena world)))}))
+  (let [v (v/look-arena (:arena world))
+        v' (add-overview-rgbs (:rgb-fn world) v)]
+    (journalise world {:to m/OVERVIEW-NAME
+                       :action :overview
+                       :args (v/dict-format-3D v')})))
 
 (defn transmit-all-views
   "For each active player, send it its own (new) view.
@@ -65,19 +79,20 @@
             (or
              (when-let [p (:player c)]
                (when-let [m (manoeuvre-map (:name p))]
-                 {:player (assoc p :manoeuvre m)}))
+                 (assoc c :player (assoc p :manoeuvre m))))
              c))]
 
     (transmit-overview
      (reduce (fn [w name]
                (let [a (:arena world)
                      me (get a name)
-                     view (v/look-plane a me)
-                     view' (map (partial map manoeuvre-cell) view)]
-                 (as-> (v/dict-format view') args
-                       (journalise w {:to name
-                                      :action action
-                                      :args args}))))
+                     view' (as-> (v/look-plane a me) view
+                                 (map (partial map manoeuvre-cell) view)
+                                 (map (partial map (partial add-rgb (:rgb-fn world))) view))
+                     args (v/dict-format view')]
+                 (journalise w {:to name
+                                :action action
+                                :args args})))
              world
              ;; We reduce over the keys so that we can sort them for unit-testing.
              (sort (keys (:arena world)))))))
@@ -100,7 +115,7 @@
      :start-round
      {})))
 
-(defn check-for-new-round
+(defn- check-for-new-round
   "See whether we have an empty arena, and can start a new round (which may
    fail if we don't have enough players waiting)."
   [world]

@@ -12,6 +12,7 @@
   (add-user [this user pass rgb] "Add a user with this password and display colour.")
   (lookup-id [this user] "Look up an ID from a username. (Probably not needed.)")
   (lookup-user [this id] "Look up user details as a map.")
+  (lookup-rgb [this user] "Look up a user's RGB value.")
   (authenticate [this user pass] "Authenticate (returning an ID), or return null.")
   (num-users [this] "Return number of users.")
   (round-over [this players] "Round finished; bump :Played for these players.")
@@ -92,6 +93,12 @@
         (sql/with-query-results rows
           ["SELECT ID FROM Users WHERE Username = ?" name]
           (:id (first rows)))))
+
+    (lookup-rgb [this name]
+      (sql/with-connection db
+        (sql/with-query-results rows
+          ["SELECT RGB FROM Users WHERE Username = ?" name]
+          (:rgb (first rows)))))
 
     (lookup-user [this id]
       (sql/with-connection db

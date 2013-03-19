@@ -293,3 +293,7 @@ java.io.File/separator
 
 
 ({"A" 1 :B 2} "A")
+
+
+
+((fn [[a b c]] [a b c]) [1 2])

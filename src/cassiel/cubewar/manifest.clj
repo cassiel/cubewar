@@ -32,3 +32,5 @@
 (def DEFAULT-DB-NAME "cubewar")
 
 (def INITIALISE-DB-ON-START true)
+
+(def DEFAULT-RGB 0x404040)

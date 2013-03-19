@@ -127,7 +127,7 @@
 (defn handler
   "Handler has been lifted out to help with unit tests."
   [world exn origin player-opt args]
-  (let [{:keys [host port]} origin
+  (let [{:keys [host _]} origin
         tx-opt (when player-opt (retrieve-transmitter world player-opt))
         ;; This is a horrible hack: when we aren't attached, we don't
         ;; have any information about the back-port, so let's blindly
@@ -136,23 +136,26 @@
                (net/start-transmitter host (last args)))]
     (println "SERVICE exception: " exn)
     (.printStackTrace exn)
-    (println "Transmitting back to: " origin)
-    (.transmit tx (net/make-message
-                   :error
-                   {:message (.getMessage exn)}))
+    (println "Transmitting back to: " tx)
+    (if tx
+      (.transmit tx (net/make-message
+                     :error
+                     {:message (.getMessage exn)}))
+      (println "No transmitter for handler."))
     world))
 
 (defn- start-state
   "The starting state for the server, setting up DB if/as required."
   []
-  {:arena {}
-   :scoring {}
-   :origins->names {}
-   :names->transmitters {}
-   ;; TEMPORARY: initialise each time.
-   :db (let [db (db/file-db m/DEFAULT-DB-NAME)]
-         (when m/INITIALISE-DB-ON-START (db/initialize db))
-         db)})
+  (let [db (db/file-db m/DEFAULT-DB-NAME)
+        ;; TEMPORARY: initialise each time.
+        _ (when m/INITIALISE-DB-ON-START (db/initialize db))]
+    {:arena {}
+     :scoring {}
+     :origins->names {}
+     :names->transmitters {}
+     :db db
+     :rgb-fn (partial db/lookup-rgb db)}))
 
 (defn start-game
   [name port]
