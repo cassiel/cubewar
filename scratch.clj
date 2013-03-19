@@ -300,3 +300,19 @@ java.io.File/separator
 
 
 (assoc {:A 1} :B 2 :C 3)
+
+(str \-)
+
+(apply str (reverse (cons 55 (cons \space (repeat 10 ">")))))
+
+(format "%d %s"
+        55
+        (apply str (repeat 55 \>)))
+
+
+world-n
+
+
+(apply str (repeat (get (:scoring world-n) :P3) "-"))
+
+(:scoring world-n)

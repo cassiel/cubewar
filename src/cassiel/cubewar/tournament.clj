@@ -46,24 +46,24 @@
     :arena (dissoc (:arena world) p)))
 
 (defn- add-attrs
-  [rgb-fn banner-fn c]
+  [world c]
   (or
    (when-let [p (:player c)]
      (assoc c :player (assoc p
-                        :rgb (rgb-fn (:name p))
-                        :banner (banner-fn (:name p)))))
+                        :rgb ((:rgb-fn world) world (:name p))
+                        :banner ((:banner-fn world) world (:name p)))))
    c))
 
-(defn add-overview-rgbs
-  [rgb-fn banner-fn view]
-  (map (partial map (partial map (partial add-attrs rgb-fn banner-fn))) view))
+(defn add-overview-attrs
+  [world view]
+  (map (partial map (partial map (partial add-attrs world))) view))
 
 (defn transmit-overview
   "Attempt to transmit the 3D view to any reserved player that's attached.
    (For now we use a reserved name: TODO authenticate more smartly.)"
   [world]
   (let [v (v/look-arena (:arena world))
-        v' (add-overview-rgbs (:rgb-fn world) (:banner-fn world) v)]
+        v' (add-overview-attrs world v)]
     (journalise world {:to m/OVERVIEW-NAME
                        :action :overview
                        :args (v/dict-format-3D v')})))
@@ -86,13 +86,11 @@
 
     (transmit-overview
      (reduce (fn [w name]
-               (let [a (:arena world)
+               (let [a (:arena w)
                      me (get a name)
                      view' (as-> (v/look-plane a me) view
                                  (map (partial map manoeuvre-cell) view)
-                                 (map (partial map (partial add-attrs
-                                                            (:rgb-fn world)
-                                                            (:banner-fn world))) view))
+                                 (map (partial map (partial add-attrs w)) view))
                      args (v/dict-format view')]
                  (journalise w {:to name
                                 :action action
@@ -163,6 +161,17 @@
        (broadcast-alert "round over (no winner)"))
       world')))
 
+(defn view
+  [world name]
+  (let [a (:arena world)
+        me (get a name)
+        view' (as-> (v/look-plane a me) view
+                    (map (partial map (partial add-attrs world)) view))
+        args (v/dict-format view')]
+    (journalise world {:to name
+                       :action :view
+                       :args args})))
+
 (defn fire
   "Takes, and returns, a complete world state. Also returns a journal.
    If a player is not in the scoring system, it's an internal error.
@@ -211,16 +220,28 @@
                         last-player? (= (count arena) 1)
                         arena (if last-player? {} arena)
 
+                        ;; Set new score:
+                        world (assoc world
+                                :scoring (assoc scoring vname new-score))
+
+                        ;; Don't update views for dead players, or anyone if the
+                        ;; round has just ended.
+                        world (transmit-all-views
+                               (assoc world :arena arena)
+                               :view
+                               {})
+
                         world (if last-player?
                                 (journalise world
                                             {:to m/BROADCAST :action :end-round}
                                             (broadcast-alert (str "round over, winner " name)))
-                                world)]
+                                world)
+
+                        ]
 
                     ;; TODO: we probably shouldn't do this immediately.
                     (check-for-new-round
                      (assoc world
-                       :scoring (assoc scoring vname new-score)
                        :arena arena)))
 
                   (throw+ {:type ::NOT-IN-SYSTEM :player vname})))

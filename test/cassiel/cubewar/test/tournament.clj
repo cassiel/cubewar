@@ -10,8 +10,8 @@
                              [tournament :as tm]
                              [tools :as t])))
 
-(defn- rgb-hack [_] m/DEFAULT-RGB)
-(defn- banner-hack [_] m/MOCK-BANNER)
+(defn- rgb-hack [w _] m/DEFAULT-RGB)
+(defn- banner-hack [w _] m/MOCK-BANNER)
 
 (defn- mock-player
   [name]
@@ -47,9 +47,8 @@
   [world]
   {:to m/OVERVIEW-NAME
    :action :overview
-   :args (v/dict-format-3D (tm/add-overview-rgbs rgb-hack
-                                                 banner-hack
-                                                 (v/look-arena (:arena world))))})
+   :args (v/dict-format-3D (tm/add-overview-attrs world
+                                                  (v/look-arena (:arena world))))})
 
 (deftest game-state
   (testing "cannot move if not in arena"
@@ -179,7 +178,8 @@
 (facts "fire-journal"
   (let [arena (-> {}
                   (pl/add-player :P (pl/gen-player [0 0 0])))
-        world {:arena arena :scoring {:P 10}}]
+        world {:arena arena
+               :scoring {:P 10}}]
     (fact "miss"
           (-> world (tm/fire :P) (:journal))
           =>
@@ -188,13 +188,34 @@
   (let [arena (-> {}
                   (pl/add-player :P1 (pl/gen-player [0 0 0]))
                   (pl/add-player :P2 (pl/gen-player [0 1 0])))
-        world {:arena arena :scoring {:P1 10 :P2 10}}]
+        world {:arena arena
+               :scoring {:P1 10 :P2 10}
+               :rgb-fn rgb-hack
+               :banner-fn banner-hack}]
     (fact "hit"
           (-> world (tm/fire :P1) (:journal))
           =>
           [{:to :P1 :action :hit :args {:player {:name :P2}}}
            {:to :P2 :action :hit-by :args {:player {:name :P1}
-                                           :hit-points 9}}])))
+                                           :hit-points 9}}
+           {:action :view
+            :args {:x0 {:y0 :wall, :y1 :wall, :y2 :wall},
+                   :x1 {:y0 {:player {:banner "xxxxx", :name :P1, :rgb 4210752}},
+                        :y1 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}},
+                        :y2 :empty},
+                   :x2 {:y0 :empty, :y1 :empty, :y2 :empty}},
+            :to :P1}
+           {:action :view,
+            :args {:x0 {:y0 :wall, :y1 :wall, :y2 :wall},
+                   :x1 {:y0 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}},
+                        :y1 :empty,
+                        :y2 :wall},
+                   :x2 {:y0 :empty, :y1 :empty, :y2 :wall}},
+            :to :P2}
+           {:to "overview"
+            :action :overview,
+            :args {:z0 {:x0 {:y0 {:player {:banner "xxxxx", :name :P1, :rgb 4210752}}, :y1 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}}, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}, :z1 {:x0 {:y0 :empty, :y1 :empty, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}, :z2 {:x0 {:y0 :empty, :y1 :empty, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}}}
+           ])))
 
 (deftest sanity-check
   (testing "rogue in arena"
@@ -257,6 +278,20 @@
                  (tm/move :P :forward)
                  (:journal))))))
 
+  (facts "asking for view"
+         (fact "view 1"
+               (let [arena (-> {}
+                               (pl/add-player :P (pl/gen-player [0 0 0])))
+                     world {:arena arena :scoring nil :rgb-fn rgb-hack :banner-fn banner-hack}
+                     world' (-> world (tm/view :P))]
+                 (:journal world')
+                 =>
+                 [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
+                                               :x1 {:y0 {:player (mock-player :P)}
+                                                    :y1 :empty
+                                                    :y2 :empty}
+                                               :x2 {:y0 :empty :y1 :empty :y2 :empty}}}])))
+
   (testing "yaw left"
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
@@ -284,30 +319,62 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
-          world {:arena arena :scoring {:P1 10 :P2 10}}
+          world {:arena arena
+                 :scoring {:P1 10 :P2 10}
+                 :rgb-fn rgb-hack
+                 :banner-fn banner-hack}
           world' (tm/fire world :P1)]
       (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
               {:to :P2 :action :hit-by :args {:player {:name :P1}
-                                              :hit-points 9}}]
+                                              :hit-points 9}}
+              {:to :P1 :action :view :args {:x0 {:y2 :wall :y1 :wall :y0 :wall}
+                                            :x1 {:y2 :empty
+                                                 :y1 {:player (mock-player :P2)}
+                                                 :y0 {:player (mock-player :P1)}}
+                                            :x2 {:y2 :empty :y1 :empty :y0 :empty}}}
+              {:to :P2 :action :view :args {:x0 {:y2 :wall :y1 :wall :y0 :wall}
+                                            :x1 {:y2 :wall
+                                                 :y1 :empty
+                                                 :y0 {:player (mock-player :P2)}}
+                                            :x2 {:y2 :wall :y1 :empty :y0 :empty}}}
+              (overview-entry world')]
              (:journal world')))
       (is (= 9 (:P2 (:scoring world'))))))
 
-  (testing "knockout"
+  (facts "knockout"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0]))
                     (pl/add-player :P3 (pl/gen-player [2 2 2])))
-          world {:arena arena :scoring {:P1 1 :P2 1 :P3 10}}
+          world {:arena arena
+                 :scoring {:P1 1 :P2 1 :P3 10}
+                 :rgb-fn rgb-hack
+                 :banner-fn banner-hack}
           world' (tm/fire world :P1)]
-      (is (= [{:to :P1 :action :hit :args {:player {:name :P2}}}
-              {:to :P2 :action :hit-by :args {:player {:name :P1}
-                                              :hit-points 0}}
-              {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}]
-             (:journal world')))
-      (is (= 0 (-> world' (:scoring) (:P2))))
-      (is (:P1 (:arena world')))
-      (is (nil? (:P2 (:arena world'))))
-      (is (:P3 (:arena world')))))
+      (fact "journal"
+            (:journal world')
+            =>
+            [{:to :P1 :action :hit :args {:player {:name :P2}}}
+             {:to :P2 :action :hit-by :args {:player {:name :P1}
+                                             :hit-points 0}}
+             {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
+             {:action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                                   :x1 {:y0 {:player (mock-player :P1)} :y1 :empty :y2 :empty}
+                                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}
+              :to :P1}
+             {:action :view :args {:x0 {:y0 :empty :y1 :wall :y2 :wall}
+                                   :x1 {:y0 {:player (mock-player :P3)} :y1 :wall :y2 :wall}
+                                   :x2 {:y0 :wall :y1 :wall :y2 :wall}}
+              :to :P3}
+             (overview-entry world')])
+      (fact "score"
+            (-> world' (:scoring) (:P2)) => 0)
+      (fact ":P1 in play"
+            (:P1 (:arena world')) => truthy)
+      (fact ":P2 removed"
+            (:P2 (:arena world')) => falsey)
+      (fact ":P3 in play"
+            (:P3 (:arena world')) => truthy)))
 
   (facts "knockout, end of round"
     (let [arena (-> {}
@@ -323,6 +390,7 @@
                 {:to :P2 :action :hit-by :args {:player {:name :P1}
                                                 :hit-points 0}}
                 {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
+                (overview-entry (assoc world' :arena {}))
                 {:to m/BROADCAST :action :end-round}
                 {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
                 {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
