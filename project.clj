@@ -5,6 +5,8 @@
                  [compojure "1.1.5"]
                  [slingshot "0.10.3"]
                  [net.loadbang/net.loadbang.osc "1.5.0"]
+                 ;; Hack because we have to manually install some Maven entries:
+                 [net.loadbang/net.loadbang.lib "1.9.0"]
                  [org.clojure/java.jdbc "0.2.3"]
                  [org.hsqldb/hsqldb "2.2.9"]
                  [commons-codec/commons-codec "1.7"]
