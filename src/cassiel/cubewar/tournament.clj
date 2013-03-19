@@ -45,23 +45,25 @@
   (assoc world
     :arena (dissoc (:arena world) p)))
 
-(defn- add-rgb
-  [lookup-fn c]
+(defn- add-attrs
+  [rgb-fn banner-fn c]
   (or
    (when-let [p (:player c)]
-     (assoc c :player (assoc p :rgb (lookup-fn (:name p)))))
+     (assoc c :player (assoc p
+                        :rgb (rgb-fn (:name p))
+                        :banner (banner-fn (:name p)))))
    c))
 
 (defn add-overview-rgbs
-  [lookup-fn view]
-  (map (partial map (partial map (partial add-rgb lookup-fn))) view))
+  [rgb-fn banner-fn view]
+  (map (partial map (partial map (partial add-attrs rgb-fn banner-fn))) view))
 
 (defn transmit-overview
   "Attempt to transmit the 3D view to any reserved player that's attached.
    (For now we use a reserved name: TODO authenticate more smartly.)"
   [world]
   (let [v (v/look-arena (:arena world))
-        v' (add-overview-rgbs (:rgb-fn world) v)]
+        v' (add-overview-rgbs (:rgb-fn world) (:banner-fn world) v)]
     (journalise world {:to m/OVERVIEW-NAME
                        :action :overview
                        :args (v/dict-format-3D v')})))
@@ -88,7 +90,9 @@
                      me (get a name)
                      view' (as-> (v/look-plane a me) view
                                  (map (partial map manoeuvre-cell) view)
-                                 (map (partial map (partial add-rgb (:rgb-fn world))) view))
+                                 (map (partial map (partial add-attrs
+                                                            (:rgb-fn world)
+                                                            (:banner-fn world))) view))
                      args (v/dict-format view')]
                  (journalise w {:to name
                                 :action action

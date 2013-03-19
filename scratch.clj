@@ -297,3 +297,6 @@ java.io.File/separator
 
 
 ((fn [[a b c]] [a b c]) [1 2])
+
+
+(assoc {:A 1} :B 2 :C 3)

@@ -10,7 +10,14 @@
                              [tournament :as tm]
                              [tools :as t])))
 
-(defn rgb-hack [_] m/DEFAULT-RGB)
+(defn- rgb-hack [_] m/DEFAULT-RGB)
+(defn- banner-hack [_] m/MOCK-BANNER)
+
+(defn- mock-player
+  [name]
+  {:name name
+   :rgb m/DEFAULT-RGB
+   :banner m/MOCK-BANNER})
 
 (deftest basics
   (testing "journalise"
@@ -40,7 +47,8 @@
   [world]
   {:to m/OVERVIEW-NAME
    :action :overview
-   :args (v/dict-format-3D (tm/add-overview-rgbs (fn [_] m/DEFAULT-RGB)
+   :args (v/dict-format-3D (tm/add-overview-rgbs rgb-hack
+                                                 banner-hack
                                                  (v/look-arena (:arena world))))})
 
 (deftest game-state
@@ -63,7 +71,10 @@
   (testing "attach when in play/scoring doesn't overwrite"
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
-          world (-> {:arena arena :scoring {:P 7} :rgb-fn rgb-hack}
+          world (-> {:arena arena
+                     :scoring {:P 7}
+                     :rgb-fn rgb-hack
+                     :banner-fn banner-hack}
                     (tm/attach :P))]
       (is (:P (:arena world)))
       (is (= 7 (:P (:scoring world))))))
@@ -71,13 +82,19 @@
   (testing "player in arena not moved on round start"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [2 2 2])))
-          world (tm/start-round {:arena arena :scoring {:P2 0} :rgb-fn rgb-hack})]
+          world (tm/start-round {:arena arena
+                                 :scoring {:P2 0}
+                                 :rgb-fn rgb-hack
+                                 :banner-fn banner-hack})]
       (is (-> world (:arena) (:P2)))
       (is (= [2 2 2]
              ((-> world (:arena) (:P1)) [0 0 0])))))
 
   (testing "round start puts two players into arena"
-    (let [world (-> {:arena {} :scoring {:P1 0 :P2 0} :rgb-fn rgb-hack}
+    (let [world (-> {:arena {}
+                     :scoring {:P1 0 :P2 0}
+                     :rgb-fn rgb-hack
+                     :banner-fn banner-hack}
                     (tm/start-round))]
       (is (:P1 (:arena world)))
       (is (:P2 (:arena world)))))
@@ -96,21 +113,20 @@
   (facts "can start round manually, with journal generated"
     (let [world (tm/start-round  {:arena {}
                                   :scoring {:P1 0 :P2 0}
-                                  :rgb-fn rgb-hack})]
+                                  :rgb-fn rgb-hack
+                                  :banner-fn banner-hack})]
       (fact "occupancy"
             (count (:arena world)) => 2)
 
       (fact "initial view"
             (:journal world)
             => [{:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P1
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P1)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
                 {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P2
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P2)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
@@ -125,19 +141,18 @@
   (facts "attach starts a round when enough players"
     (let [world {:arena {}
                  :scoring {:P1 0}
-                 :rgb-fn rgb-hack}
+                 :rgb-fn rgb-hack
+                 :banner-fn banner-hack}
           world' (tm/attach world :P2)]
       (fact (:journal world')
             => [{:to :P2 :action :welcome}
                 {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P1
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P1)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
                 {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P2
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P2)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
@@ -195,13 +210,13 @@
   (testing "forward OK, one player"
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
-          world {:arena arena :scoring nil :rgb-fn rgb-hack}
+          world {:arena arena :scoring nil :rgb-fn rgb-hack :banner-fn banner-hack}
           world' (-> world
                      (tm/move :P :forward))]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                           :x1 {:y0 {:player {:name :P
-                                                              :rgb m/DEFAULT-RGB
-                                                              :manoeuvre :forward}}
+                                           :x1 {:y0 {:player (assoc (mock-player :P)
+                                                               :manoeuvre :forward
+                                                               )}
                                                 :y1 :empty
                                                 :y2 :wall}
                                            :x2 {:y0 :empty :y1 :empty :y2 :wall}}}
@@ -212,25 +227,22 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [1 0 0])))
-          world {:arena arena :scoring nil :rgb-fn rgb-hack}
+          world {:arena arena :scoring nil :rgb-fn rgb-hack :banner-fn banner-hack}
           world' (-> world
                      (tm/move :P1 :forward))]
       ;; The order of these journal items is implementation-dependent (we reduce over
       ;; the set of active players). TODO: we could sort them first.
       (is (= [{:to :P1 :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                            :x1 {:y0 {:player {:name :P1
-                                                               :rgb m/DEFAULT-RGB
-                                                               :manoeuvre :forward}}
+                                            :x1 {:y0 {:player (assoc (mock-player :P1)
+                                                                :manoeuvre :forward)}
                                                  :y1 :empty
                                                  :y2 :wall}
                                             :x2 {:y0 :empty :y1 :empty :y2 :wall}}}
               {:to :P2 :action :view :args {:x0 {:y0 :empty
-                                                 :y1 {:player {:name :P1
-                                                               :rgb m/DEFAULT-RGB
-                                                               :manoeuvre :forward}}
+                                                 :y1 {:player (assoc (mock-player :P1)
+                                                                :manoeuvre :forward)}
                                                  :y2 :empty}
-                                            :x1 {:y0 {:player {:name :P2
-                                                               :rgb m/DEFAULT-RGB}}
+                                            :x1 {:y0 {:player (mock-player :P2)}
                                                  :y1 :empty :y2 :empty}
                                             :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
               (overview-entry world')]
@@ -248,13 +260,12 @@
   (testing "yaw left"
     (let [arena (-> {}
                     (pl/add-player :P (pl/gen-player [0 0 0])))
-          world {:arena arena :scoring nil :rgb-fn rgb-hack}
+          world {:arena arena :scoring nil :rgb-fn rgb-hack :banner-fn banner-hack}
           world' (-> world
                      (tm/move :P :yaw-left))]
       (is (= [{:to :P :action :view :args {:x0 {:y0 :wall :y1 :wall :y2 :wall }
-                                           :x1 {:y0 {:player {:name :P
-                                                              :rgb m/DEFAULT-RGB
-                                                              :manoeuvre :yaw-left}}
+                                           :x1 {:y0 {:player (assoc (mock-player :P)
+                                                               :manoeuvre :yaw-left)}
                                                 :y1 :wall
                                                 :y2 :wall}
                                            :x2 {:y0 :empty :y1 :wall :y2 :wall}}}
@@ -302,7 +313,10 @@
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
                     (pl/add-player :P2 (pl/gen-player [0 1 0])))
-          world {:arena arena :scoring {:P1 1 :P2 1 :P3 10} :rgb-fn rgb-hack}
+          world {:arena arena
+                 :scoring {:P1 1 :P2 1 :P3 10}
+                 :rgb-fn rgb-hack
+                 :banner-fn banner-hack}
           world' (tm/fire world :P1)]
       (fact (:journal world')
             => [{:to :P1 :action :hit :args {:player {:name :P2}}}
@@ -312,20 +326,17 @@
                 {:to m/BROADCAST :action :end-round}
                 {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
                 {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P1
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P1)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
                 {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P2
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P2)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
                 {:to :P3 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player {:name :P3
-                                                                        :rgb m/DEFAULT-RGB}}
+                                                     :x1 {:y0 {:player (mock-player :P3)}
                                                           :y1 :empty
                                                           :y2 :empty}
                                                      :x2 {:y0 :empty :y1 :empty :y2 :empty}}}

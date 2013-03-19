@@ -144,6 +144,11 @@
       (println "No transmitter for handler."))
     world))
 
+(defn- defaulter
+  "Needed for some of our testing code where players don't have all attributes."
+  [f default]
+  #(or (f %) default))
+
 (defn- start-state
   "The starting state for the server, setting up DB if/as required."
   []
@@ -155,7 +160,8 @@
      :origins->names {}
      :names->transmitters {}
      :db db
-     :rgb-fn (partial db/lookup-rgb db)}))
+     :rgb-fn (defaulter (partial db/lookup-rgb db) 0xFFFFFF)
+     :banner-fn (fn [_] "I-am-here.")}))
 
 (defn start-game
   [name port]

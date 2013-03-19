@@ -26,11 +26,14 @@
 (def BROADCAST ::*)
 
 ;; Temporary: reserved name for overview.
-
 (def OVERVIEW-NAME "overview")
 
 (def DEFAULT-DB-NAME "cubewar")
 
 (def INITIALISE-DB-ON-START true)
 
+;; Used mainly for testing:
 (def DEFAULT-RGB 0x404040)
+
+;; Used for testing:
+(def MOCK-BANNER "xxxxx")
