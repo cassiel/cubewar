@@ -94,7 +94,11 @@
     :handshake
     (t/journalise world {:to player :action :handshake-reply})
 
-    :fire (t/fire world player)
+    :fire
+    (t/fire world player)
+
+    :kick
+    (t/kick world)
 
     ;; Anything else: look it up as a manoeuvre function.
     (t/move world player action)))
@@ -127,13 +131,17 @@
 (defn handler
   "Handler has been lifted out to help with unit tests."
   [world exn origin player-opt args]
-  (let [{:keys [host _]} origin
+  (let [_ (println "Attempting to HANDLE: " (.getMessage exn))
+        {:keys [host _]} origin
         tx-opt (when player-opt (retrieve-transmitter world player-opt))
         ;; This is a horrible hack: when we aren't attached, we don't
         ;; have any information about the back-port, so let's blindly
         ;; use the last argument (works for `:attach`).
         tx (or tx-opt
-               (net/start-transmitter host (last args)))]
+               (do
+                 (println "ATTEMPTING Transmitter on " host " " (last args))
+                 (when (last args)      ; Bullet-proofing - need to track this down.
+                   (net/start-transmitter host (last args)))))]
     (println "SERVICE exception: " exn)
     (.printStackTrace exn)
     (println "Transmitting back to: " tx)
@@ -185,7 +193,10 @@
                                 (vals (:names->transmitters new))
                                 [(retrieve-transmitter new to)])
                           msg (net/make-message (:action x) (:args x))]
-                      (doseq [tx txs] (.transmit tx msg)))))
+                      (doseq [tx txs]
+                        ;; The `when` check is for `Observer` which we
+                        ;; send to regardless of whether it's attached.
+                        (when tx (.transmit tx msg))))))
                 (catch Exception exn
                   (println "WATCHER exception: " exn)
                   (.printStackTrace exn))))]

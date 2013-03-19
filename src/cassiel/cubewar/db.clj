@@ -1,6 +1,7 @@
 (ns cassiel.cubewar.db
   "Database wrapper."
-  (:require (clojure.java [jdbc :as sql]))
+  (:require (clojure.java [jdbc :as sql])
+            (cassiel.cubewar [manifest :as m]))
   (:use [slingshot.slingshot :only [try+ throw+]])
   (:import [java.sql BatchUpdateException]
            [org.apache.commons.codec.digest DigestUtils]))
@@ -75,7 +76,8 @@
       (clear this)
       (add-user this "Demo1" "Pass1" 0xFFFFFF)
       (add-user this "Demo2" "Pass2" 0xFFFFFF)
-      (add-user this "Demo3" "Pass3" 0xFFFFFF))
+      (add-user this "Demo3" "Pass3" 0xFFFFFF)
+      (add-user this m/OBSERVER-NAME "xyzzy" 0x303030))
 
     (add-user [this user pass rgb]
       (if (lookup-id this user)

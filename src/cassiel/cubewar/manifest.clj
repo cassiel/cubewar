@@ -26,7 +26,7 @@
 (def BROADCAST ::*)
 
 ;; Temporary: reserved name for overview.
-(def OVERVIEW-NAME "overview")
+(def OBSERVER-NAME "Observer")
 
 (def DEFAULT-DB-NAME "cubewar")
 

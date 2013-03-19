@@ -64,7 +64,7 @@
   [world]
   (let [v (v/look-arena (:arena world))
         v' (add-overview-attrs world v)]
-    (journalise world {:to m/OVERVIEW-NAME
+    (journalise world {:to m/OBSERVER-NAME
                        :action :overview
                        :args (v/dict-format-3D v')})))
 
@@ -131,6 +131,8 @@
 
     world))
 
+(def kick check-for-new-round)
+
 (defn attach
   "Attaches a player (game state only; not networking). A new player is put into
    standby in the round scoring system, if not already present.
@@ -196,56 +198,65 @@
               (let [old-score (get scoring vname)]
                 (if old-score
                   (let [new-score (dec old-score)
-                        ;; Report the hit (to shooter and to victim):
+
+                        arena
+                        (as->
+                         arena a
+                         ;; Remove player from arena if dead:
+                         (if (pos? new-score) a (dissoc a vname))
+
+                         ;; Empty arena (and report game end) if last player:
+                         (if (= (count a) 1)
+                           {}
+                           a))
+
                         world
-                        (journalise world
-                                    {:to name :action :hit :args {:player victim}}
-                                    {:to vname
-                                     :action :hit-by
-                                     :args {:player {:name name} :hit-points new-score}})
+                        (as->
+                         world w
+                         ;; Report the hit (to shooter and to victim):
+                         (journalise w
+                                     {:to name :action :hit :args {:player victim}}
+                                     {:to vname
+                                      :action :hit-by
+                                      :args {:player {:name name} :hit-points new-score}})
+
+                         ;; If player killed, broadcast it:
+                         (if-not (pos? new-score)
+                           (journalise w {:to m/BROADCAST
+                                          :action :dead
+                                          :args {:player victim}})
+                           w)
+
+                         ;; Set new score:
+                         (assoc w
+                           :scoring (assoc scoring vname new-score))
 
 
-                        ;; If player killed, broadcast it:
-                        world
-                        (if-not (pos? new-score)
-                          (journalise world {:to m/BROADCAST
-                                             :action :dead
-                                             :args {:player victim}})
-                          world)
+                         ;; Don't update views for dead players, or anyone if the
+                         ;; round has just ended.
+                         (transmit-all-views
+                          (assoc w :arena arena)
+                          :view
+                          {})
 
-                        ;; Remove player from arena if dead:
-                        arena (if (pos? new-score) arena (dissoc arena vname))
+                         ;; Check for round over:
+                         (if (empty? arena)
+                           (journalise w
+                                       {:to m/BROADCAST :action :end-round}
+                                       (broadcast-alert (str "round over, winner " name)))
+                           w)
 
-                        ;; Empty arena (and report game end) if last player:
-                        last-player? (= (count arena) 1)
-                        arena (if last-player? {} arena)
-
-                        ;; Set new score:
-                        world (assoc world
-                                :scoring (assoc scoring vname new-score))
-
-                        ;; Don't update views for dead players, or anyone if the
-                        ;; round has just ended.
-                        world (transmit-all-views
-                               (assoc world :arena arena)
-                               :view
-                               {})
-
-                        world (if last-player?
-                                (journalise world
-                                            {:to m/BROADCAST :action :end-round}
-                                            (broadcast-alert (str "round over, winner " name)))
-                                world)
-
-                        ]
+                         ;; Update arena.
+                         (assoc w :arena arena))]
 
                     ;; TODO: we probably shouldn't do this immediately.
-                    (check-for-new-round
-                     (assoc world
-                       :arena arena)))
+                    #_ (check-for-new-round world)
+                    world)
 
+                  ;; no `old-score`:
                   (throw+ {:type ::NOT-IN-SYSTEM :player vname})))
 
+              ;; no `vname`:
               (journalise world {:to name :action :miss}))))))
 
 (defn move

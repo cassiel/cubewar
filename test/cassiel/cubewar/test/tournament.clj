@@ -45,7 +45,7 @@
 (defn- overview-entry
   "Journal entry for overview."
   [world]
-  {:to m/OVERVIEW-NAME
+  {:to m/OBSERVER-NAME
    :action :overview
    :args (v/dict-format-3D (tm/add-overview-attrs world
                                                   (v/look-arena (:arena world))))})
@@ -199,23 +199,32 @@
            {:to :P2 :action :hit-by :args {:player {:name :P1}
                                            :hit-points 9}}
            {:action :view
-            :args {:x0 {:y0 :wall, :y1 :wall, :y2 :wall},
-                   :x1 {:y0 {:player {:banner "xxxxx", :name :P1, :rgb 4210752}},
-                        :y1 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}},
-                        :y2 :empty},
-                   :x2 {:y0 :empty, :y1 :empty, :y2 :empty}},
+            :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                   :x1 {:y0 {:player (mock-player :P1)}
+                        :y1 {:player (mock-player :P2)}
+                        :y2 :empty}
+                   :x2 {:y0 :empty :y1 :empty :y2 :empty}}
             :to :P1}
-           {:action :view,
-            :args {:x0 {:y0 :wall, :y1 :wall, :y2 :wall},
-                   :x1 {:y0 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}},
-                        :y1 :empty,
-                        :y2 :wall},
-                   :x2 {:y0 :empty, :y1 :empty, :y2 :wall}},
+           {:action :view
+            :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                   :x1 {:y0 {:player (mock-player :P2)}
+                        :y1 :empty
+                        :y2 :wall}
+                   :x2 {:y0 :empty :y1 :empty :y2 :wall}}
             :to :P2}
-           {:to "overview"
-            :action :overview,
-            :args {:z0 {:x0 {:y0 {:player {:banner "xxxxx", :name :P1, :rgb 4210752}}, :y1 {:player {:banner "xxxxx", :name :P2, :rgb 4210752}}, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}, :z1 {:x0 {:y0 :empty, :y1 :empty, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}, :z2 {:x0 {:y0 :empty, :y1 :empty, :y2 :empty}, :x1 {:y0 :empty, :y1 :empty, :y2 :empty}, :x2 {:y0 :empty, :y1 :empty, :y2 :empty}}}}
-           ])))
+           {:to m/OBSERVER-NAME
+            :action :overview
+            :args {:z0 {:x0 {:y0 {:player (mock-player :P1)}
+                             :y1 {:player (mock-player :P2)}
+                             :y2 :empty}
+                        :x1 {:y0 :empty :y1 :empty :y2 :empty}
+                        :x2 {:y0 :empty :y1 :empty :y2 :empty}}
+                   :z1 {:x0 {:y0 :empty :y1 :empty :y2 :empty}
+                        :x1 {:y0 :empty :y1 :empty :y2 :empty}
+                        :x2 {:y0 :empty :y1 :empty :y2 :empty}}
+                   :z2 {:x0 {:y0 :empty :y1 :empty :y2 :empty}
+                        :x1 {:y0 :empty :y1 :empty :y2 :empty}
+                        :x2 {:y0 :empty :y1 :empty :y2 :empty}}}}])))
 
 (deftest sanity-check
   (testing "rogue in arena"
@@ -376,6 +385,56 @@
       (fact ":P3 in play"
             (:P3 (:arena world')) => truthy)))
 
+  (facts "restart OK"
+         (let [arena  {}
+               world {:arena arena
+                      :scoring {:P1 1 :P2 1 :P3 10}
+                      :rgb-fn rgb-hack
+                      :banner-fn banner-hack}
+               world' (tm/kick world)]
+           (fact "restart journal"
+                 (:journal world')
+                 =>
+                 [{:to :P1
+                   :action :start-round
+                   :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                          :x1 {:y0 {:player (mock-player :P1)}
+                               :y1 :empty
+                               :y2 :empty}
+                          :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+                  {:to :P2
+                   :action :start-round
+                   :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                          :x1 {:y0 {:player (mock-player :P2)}
+                               :y1 :empty
+                               :y2 :empty}
+                          :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+                  {:to :P3
+                   :action :start-round
+                   :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                          :x1 {:y0 {:player (mock-player :P3)}
+                               :y1 :empty
+                               :y2 :empty}
+                          :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
+                  (overview-entry world')])
+           ;; Players have been put back into play:
+           (fact (-> world' (:arena) (:P1)) => truthy)
+           (fact (-> world' (:arena) (:P2)) => truthy)
+           (fact (-> world' (:arena) (:P3)) => truthy)))
+
+  (facts "restart benign"
+         (let [arena (-> {}
+                         (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                         (pl/add-player :P2 (pl/gen-player [0 1 0])))
+               world {:arena arena
+                      :scoring {:P1 1 :P2 1 :P3 10}
+                      :journal []
+                      :rgb-fn rgb-hack
+                      :banner-fn banner-hack}
+               world' (tm/kick world)]
+           (fact "restart ignored"
+                 (:journal world') => [])))
+
   (facts "knockout, end of round"
     (let [arena (-> {}
                     (pl/add-player :P1 (pl/gen-player [0 0 0]))
@@ -392,24 +451,4 @@
                 {:to m/BROADCAST :action :dead :args {:player {:name :P2}}}
                 (overview-entry (assoc world' :arena {}))
                 {:to m/BROADCAST :action :end-round}
-                {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}
-                {:to :P1 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player (mock-player :P1)}
-                                                          :y1 :empty
-                                                          :y2 :empty}
-                                                     :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
-                {:to :P2 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player (mock-player :P2)}
-                                                          :y1 :empty
-                                                          :y2 :empty}
-                                                     :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
-                {:to :P3 :action :start-round :args {:x0 {:y0 :wall :y1 :wall :y2 :wall}
-                                                     :x1 {:y0 {:player (mock-player :P3)}
-                                                          :y1 :empty
-                                                          :y2 :empty}
-                                                     :x2 {:y0 :empty :y1 :empty :y2 :empty}}}
-                 (overview-entry world')])
-      ;; Players have been put back into play:
-      (fact (-> world' (:arena) (:P1)) => truthy)
-      (fact (-> world' (:arena) (:P2)) => truthy)
-      (fact (-> world' (:arena) (:P3)) => truthy))))
+                {:to m/BROADCAST :action :alert :args {:message "round over, winner :P1"}}]))))

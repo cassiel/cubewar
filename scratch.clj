@@ -152,6 +152,7 @@ state0
 (srv/interact g 8001 :attach ["Harmony" 9998])
 (srv/interact g 8001 :handshake nil)
 (srv/interact g 8001 :fire nil)
+(srv/interact g 8001 :kick nil)
 (srv/interact g 8001 :pitch-up nil)
 (srv/interact g 8001 :yaw-right nil)
 (srv/interact g 8001 :forward nil)
@@ -164,6 +165,14 @@ state0
 (srv/interact g 8002 :yaw-right nil)
 (srv/interact g 8002 :forward nil)
 (srv/interact g 8002 :detach nil)
+
+(srv/interact g 8003 :attach ["Observer" 9996])
+(srv/interact g 8003 :handshake nil)
+(srv/interact g 8003 :fire nil)
+(srv/interact g 8003 :pitch-up nil)
+(srv/interact g 8003 :yaw-right nil)
+(srv/interact g 8003 :forward nil)
+(srv/interact g 8003 :detach nil)
 
 (srv/close g)
 
