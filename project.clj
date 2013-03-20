@@ -11,7 +11,8 @@
                  [org.hsqldb/hsqldb "2.2.9"]
                  [commons-codec/commons-codec "1.7"]
                  [eu.cassiel/clojure-zeroconf "1.1.0"]
-                 [org.clojure/tools.cli "0.2.2"]]
+                 [org.clojure/tools.cli "0.2.2"]
+                 [org.clojure/tools.nrepl "0.2.2"]]
   :plugins [[lein-midje "3.0.0"]
             [lein-marginalia "0.7.1"]]
   :profiles

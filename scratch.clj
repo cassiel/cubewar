@@ -140,7 +140,7 @@ state0
 
 ;; --- Network testing.
 
-(def g (srv/start-game "Cubewar-Lein" 8123))
+(def g (srv/start-game "Cubewar-Lein" 8123 "cubewar"))
 
 (srv/examine g)
 
@@ -325,3 +325,5 @@ world-n
 (apply str (repeat (get (:scoring world-n) :P3) "-"))
 
 (:scoring world-n)
+
+(str (java.util.Date.))

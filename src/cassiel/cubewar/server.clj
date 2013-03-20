@@ -154,8 +154,8 @@
 
 (defn- start-state
   "The starting state for the server, setting up DB if/as required."
-  []
-  (let [db (db/file-db m/DEFAULT-DB-NAME)
+  [db-name]
+  (let [db (db/file-db db-name)
         ;; TEMPORARY: initialise each time.
         _ (when m/INITIALISE-DB-ON-START (db/initialize db))]
     {:arena {}
@@ -174,10 +174,10 @@
                             i)))}))
 
 (defn start-game
-  [name port]
+  [name port db-name]
 
   ;; Test with strings for players - these are directly in the OSC at the moment.
-  (let [WORLD (atom (start-state))]
+  (let [WORLD (atom (start-state db-name))]
 
     ;; The watcher runs through the journal, picking out the destination transmitter via `:to`
     ;; (or all of them for a broadcast), making a `Message` out of the rest of each entry,

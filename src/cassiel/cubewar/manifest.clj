@@ -28,6 +28,12 @@
 ;; Temporary: reserved name for overview.
 (def OBSERVER-NAME "Observer")
 
+(def DEFAULT-SERVICE-NAME "Cubewar")
+
+(def DEFAULT-SERVICE-PORT 8123)
+
+(def DEFAULT-NREPL-PORT 9123)
+
 (def DEFAULT-DB-NAME "cubewar")
 
 (def INITIALISE-DB-ON-START true)
