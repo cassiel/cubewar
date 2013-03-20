@@ -46,7 +46,12 @@
 
   (testing "attach: journal"
     (let [WORLD (atom world-n)]
-      (is (= [{:to :P1 :action :welcome}
+      (is (= [{:to :P1
+               :action :welcome
+               :args {:league {:_0 {:name "Demo1" :played 0 :won 0}
+                               :_1 {:name "Demo2" :played 0 :won 0}
+                               :_2 {:name "Demo3" :played 0 :won 0}
+                               :_3 {:name "Observer" :played 0 :won 0}}}}
               {:to :P1 :action :attached :args {:host "localhost" :port 9998}}]
              (srv/serve1 WORLD
                          nil

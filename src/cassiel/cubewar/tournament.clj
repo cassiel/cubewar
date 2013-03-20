@@ -145,7 +145,9 @@
      (journalise
       (assoc world
         :scoring (assoc scoring name (or (scoring name) 0)))
-      {:to name :action :welcome}))))
+      {:to name
+       :action :welcome
+       :args {:league (db/league-to-dict (:db world))}}))))
 
 (defn detach
   "Remove a player completely from the game state. (No changes to networking done
@@ -225,14 +227,14 @@
                          ;; If player killed, inform, and broadcast it:
                          (if-not (pos? new-score)
                            (do
-                             (when db
-                               (db/out-of-round db victim))
+                             (db/out-of-round db vname)
                              (journalise w
                                          {:to vname
                                           :action :you-dead}
                                          {:to m/BROADCAST
                                           :action :dead
-                                          :args {:player victim}}))
+                                          :args {:player victim
+                                                 :league (db/league-to-dict db)}}))
                            w)
 
                          ;; Set new score:
@@ -250,11 +252,12 @@
                          ;; Check for round over:
                          (if (empty? arena)
                            (do
-                             (when db
-                               (db/out-of-round db name)
-                               (db/winner db name))
+                             (db/out-of-round db name)
+                             (db/winner db name)
                              (journalise w
-                                         {:to m/BROADCAST :action :end-round}
+                                         {:to m/BROADCAST
+                                          :action :end-round
+                                          :args {:league (db/league-to-dict db)}}
                                          (broadcast-alert (str "round over, winner " name))))
                            w)
 

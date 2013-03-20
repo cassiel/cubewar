@@ -70,24 +70,29 @@
          [:Password "VARCHAR(255)" "NOT NULL"]
          [:RGB "INTEGER" "NOT NULL"]
          [:Played "INTEGER" "NOT NULL"]
-         [:Won "INTEGER" "NOT NULL"])))
+         [:Won "INTEGER" "NOT NULL"]))
+
+      this)
 
     (initialize [this]
-      (clear this)
-      (add-user this "Demo1" "Pass1" 0xFFFFFF)
-      (add-user this "Demo2" "Pass2" 0xFFFFFF)
-      (add-user this "Demo3" "Pass3" 0xFFFFFF)
-      (add-user this m/OBSERVER-NAME "xyzzy" 0x303030))
+      (-> this
+          (clear)
+          (add-user "Demo1" "Pass1" 0xFFFFFF)
+          (add-user "Demo2" "Pass2" 0xFFFFFF)
+          (add-user "Demo3" "Pass3" 0xFFFFFF)
+          (add-user m/OBSERVER-NAME "xyzzy" 0x303030)))
 
     (add-user [this user pass rgb]
       (if (lookup-id this user)
         (throw+ {:type ::DUPLICATE-USER})
         (sql/with-connection db
-          (:id (sql/insert-record :Users {:Username user
-                                          :Password (crypt pass)
-                                          :RGB rgb
-                                          :Played 0
-                                          :Won 0})))))
+          (sql/insert-record :Users {:Username user
+                                     :Password (crypt pass)
+                                     :RGB rgb
+                                     :Played 0
+                                     :Won 0})))
+
+      this)
 
     ;; TODO do we need this? (Only in `add-user` perhaps.)
     (lookup-id [this name]
@@ -128,12 +133,14 @@
           (:c (first rows)))))
 
     (out-of-round [this name]
+      ;; The `str` conversion here (and in `winner`) is for dealing with all the tests
+      ;; where we are using keywords for players (and have no DB entries for them).
       (sql/with-connection db
-        (sql/do-prepared "UPDATE Users SET Played = Played + 1 WHERE Username = ?" [name])))
+        (sql/do-prepared "UPDATE Users SET Played = Played + 1 WHERE Username = ?" [(str name)])))
 
     (winner [this name]
       (sql/with-connection db
-        (sql/do-prepared "UPDATE Users SET Won = Won + 1 WHERE Username = ?" [name])))
+        (sql/do-prepared "UPDATE Users SET Won = Won + 1 WHERE Username = ?" [(str name)])))
 
     (score [this name]
       (sql/with-connection db
@@ -146,9 +153,9 @@
     (league [this]
       (sql/with-connection db
         (sql/with-query-results rows
-          [(str "SELECT Username AS Player, Played, Won "
+          [(str "SELECT Username AS Name, Played, Won "
                 "  FROM Users "
-                " ORDER BY Won DESC, Played DESC")]
+                " ORDER BY Won DESC, Played DESC, Name ASC")]
           (doall rows))))))
 
 (defn mem-db
@@ -160,3 +167,13 @@
   "Create a database on disk."
   [path]
   (make-db (file-db-spec path)))
+
+(defn ordinal-keys [prefix items]
+  (first
+   (reduce (fn [[m i] x] [(assoc m (keyword (str prefix i)) x) (inc i)])
+           [{} 0]
+           items)))
+
+(defn league-to-dict
+  [db]
+  (ordinal-keys "_" (league db)))
