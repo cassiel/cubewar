@@ -180,7 +180,7 @@
    If the player is not in the cube, then they're (presumably) sitting
    out this tournament round."
   [world name]
-  (let [{:keys [arena scoring]} world
+  (let [{:keys [arena scoring db]} world
         me-scored (get scoring name)
         me-playing (get arena name)]
 
@@ -224,12 +224,15 @@
 
                          ;; If player killed, inform, and broadcast it:
                          (if-not (pos? new-score)
-                           (journalise w
-                                       {:to vname
-                                        :action :you-dead}
-                                       {:to m/BROADCAST
-                                        :action :dead
-                                        :args {:player victim}})
+                           (do
+                             (when db
+                               (db/out-of-round db victim))
+                             (journalise w
+                                         {:to vname
+                                          :action :you-dead}
+                                         {:to m/BROADCAST
+                                          :action :dead
+                                          :args {:player victim}}))
                            w)
 
                          ;; Set new score:
@@ -246,9 +249,13 @@
 
                          ;; Check for round over:
                          (if (empty? arena)
-                           (journalise w
-                                       {:to m/BROADCAST :action :end-round}
-                                       (broadcast-alert (str "round over, winner " name)))
+                           (do
+                             (when db
+                               (db/out-of-round db name)
+                               (db/winner db name))
+                             (journalise w
+                                         {:to m/BROADCAST :action :end-round}
+                                         (broadcast-alert (str "round over, winner " name))))
                            w)
 
                          ;; Update arena.

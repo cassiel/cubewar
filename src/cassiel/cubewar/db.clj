@@ -16,7 +16,7 @@
   (lookup-rgb [this user] "Look up a user's RGB value.")
   (authenticate [this user pass] "Authenticate (returning an ID), or return null.")
   (num-users [this] "Return number of users.")
-  (round-over [this players] "Round finished; bump :Played for these players.")
+  (out-of-round [this name] "Round is over for this player.")
   (winner [this name] "Bump the win count for this player.")
   (score [this name] "Get the score as `{:played X :won Y}`.")
   (league [this] "Get the entire league table."))
@@ -127,11 +127,9 @@
           ["SELECT Count(*) AS C FROM Users"]
           (:c (first rows)))))
 
-    (round-over [this players]
+    (out-of-round [this name]
       (sql/with-connection db
-        (apply sql/do-prepared
-               "UPDATE Users SET Played = Played + 1 WHERE Username = ?"
-               (map #(identity [%]) players))))
+        (sql/do-prepared "UPDATE Users SET Played = Played + 1 WHERE Username = ?" [name])))
 
     (winner [this name]
       (sql/with-connection db
