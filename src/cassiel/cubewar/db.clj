@@ -129,16 +129,13 @@
 
     (round-over [this players]
       (sql/with-connection db
-        (doseq [p players]
-          nil
-          #_ (sql/execute! db
-                        ["UPDATE Users SET Played = Played + 1 WHERE Username = ?" p]))))
+        (apply sql/do-prepared
+               "UPDATE Users SET Played = Played + 1 WHERE Username = ?"
+               (map #(identity [%]) players))))
 
     (winner [this name]
       (sql/with-connection db
-        nil
-        #_ (sql/execute! db
-                      ["UPDATE Users SET Won = Won + 1 WHERE Username = ?" name])))
+        (sql/do-prepared "UPDATE Users SET Won = Won + 1 WHERE Username = ?" [name])))
 
     (score [this name]
       (sql/with-connection db
@@ -149,7 +146,12 @@
             (throw+ {:type ::NO-SUCH-USER :name name})))))
 
     (league [this]
-      nil)))
+      (sql/with-connection db
+        (sql/with-query-results rows
+          [(str "SELECT Username AS Player, Played, Won "
+                "  FROM Users "
+                " ORDER BY Won DESC, Played DESC")]
+          (doall rows))))))
 
 (defn mem-db
   "Create a database in memory (for testing)."
