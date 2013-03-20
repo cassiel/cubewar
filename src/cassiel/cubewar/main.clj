@@ -7,5 +7,6 @@
   (println
    (cli args
         ["--port" "Listen on this port" :default 8123 :parse-fn #(Integer. %)]
+        ["--nrepl" "NREPL on this port" :default 9123 :parse-fn #(Integer. %)]
         ["--name" "The Zeroconf engine name" :default "Cubewar"]
         ["--db" "The database name":default "cubewar"])))
