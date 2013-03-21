@@ -226,7 +226,7 @@
                                                   action
                                                   args))
         (clear [this]
-          (reset! WORLD (start-state)))
+          (reset! WORLD (start-state db-name)))
 
         (close [this]
           (zs/close zeroconf)

@@ -144,10 +144,12 @@ state0
 
 (srv/examine g)
 
-(srv/clear g)
+(:scoring (srv/examine g))
 
 (map (fn [[name f]] {:n name :pos (f [0 0 0])})
      (:arena (srv/examine g)))
+
+(srv/clear g)
 
 (srv/interact g 8001 :attach ["Harmony" 9998])
 (srv/interact g 8001 :handshake nil)
