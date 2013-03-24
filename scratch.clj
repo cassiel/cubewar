@@ -329,3 +329,20 @@ world-n
 (:scoring world-n)
 
 (str (java.util.Date.))
+
+
+(cassiel.cubewar.cube/wall?  [0 0 0])
+
+(map #(* % %)
+     [1 2 3 4 5 ])
+
+
+
+{:A 4
+ :B 2
+ :C 4
+ :D "Hello"}
+
+(java.util.Date.)
+
+(System/getProperty "java.version")

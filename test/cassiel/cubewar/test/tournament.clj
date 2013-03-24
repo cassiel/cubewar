@@ -186,7 +186,29 @@
         (is (nil? (:P2 (:arena world))))
         (is (= [{:to m/BROADCAST :action :end-round}
                 {:to m/BROADCAST :action :alert :args {:message "round over (no winner)"}}]
-               (:journal world)))))))
+               (:journal world)))))
+
+    (fact "a detaching player refreshes the overview and the views for remaining players"
+          (let [arena (-> {}
+                          (pl/add-player :P1 (pl/gen-player [0 0 0]))
+                          (pl/add-player :P2 (pl/gen-player [0 0 1]))
+                          (pl/add-player :P3 (pl/gen-player [0 0 2])))
+                world (tm/detach {:arena arena
+                                  :rgb-fn rgb-hack
+                                  :banner-fn banner-hack} :P2)]
+            (:journal world)
+            =>
+            [{:to :P1
+              :action :view
+              :view {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                     :x1 {:y0 {:player {:name :P1}} :y1 :wall :y2 :wall}
+                     :x2 {:y0 :wall :y1 :wall :y2 :wall}}}
+             {:to :P3
+              :action :view
+              :view {:x0 {:y0 :wall :y1 :wall :y2 :wall}
+                     :x1 {:y0 {:player {:name :P3}} :y1 :wall :y2 :wall}
+                     :x2 {:y0 :wall :y1 :wall :y2 :wall}}}
+             (overview-entry world)]))))
 
 (facts "fire-journal"
   (let [arena (-> {}
