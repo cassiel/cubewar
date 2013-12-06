@@ -1,12 +1,10 @@
-(defproject eu.cassiel/cubewar "0.1.0-SNAPSHOT"
+(defproject eu.cassiel/cubewar "0.1.1-SNAPSHOT"
   :description "FIXME: write description"
   :url "https://github.com/cassiel/cubewar"
   :main cassiel.cubewar.main
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [slingshot "0.10.3"]
-                 [net.loadbang/net.loadbang.osc "1.5.0"]
-                 ;; Hack because we have to manually install some Maven entries:
-                 [net.loadbang/net.loadbang.lib "1.9.0"]
+                 [net.loadbang/net.loadbang.osc "1.6.1"]
                  [org.clojure/java.jdbc "0.2.3"]
                  [org.hsqldb/hsqldb "2.2.9"]
                  [commons-codec/commons-codec "1.7"]
