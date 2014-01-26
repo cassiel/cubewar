@@ -1,5 +1,4 @@
-cubewar
-=======
+# `cubewar` [![Dependency Status](https://www.versioneye.com/user/projects/52e4ff84ec13750d0c000159/badge.png)](https://www.versioneye.com/user/projects/52e4ff84ec13750d0c000159)
 
 Implementation of Cubewar for MaxMSP and Clojure
 
